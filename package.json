@@ -1,0 +1,13 @@
+{
+  "name": "laravel-next-starter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unified Laravel 12 API + Next.js App Router Starter Template",
+  "scripts": {
+    "dev:backend": "cd backend && php artisan serve",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "lint:frontend": "cd frontend && npm run lint",
+    "test:backend": "cd backend && php artisan test"
+  }
+}
