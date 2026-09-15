@@ -21,6 +21,7 @@ class MenuService
         Cache::forget('menu_tree_footer-menu');
         Cache::forget('menu_loc_header');
         Cache::forget('menu_loc_footer');
+        Cache::forget('menu_loc_sidebar');
     }
 
     /**
@@ -43,7 +44,7 @@ class MenuService
                 ->where('is_active', true)
                 ->get();
 
-            return $this->buildTree($items);
+            return $this->buildTree($items, null);
         });
     }
 
@@ -65,7 +66,7 @@ class MenuService
                 ->where('is_active', true)
                 ->get();
 
-            return $this->buildTree($items);
+            return $this->buildTree($items, null);
         });
     }
 
@@ -77,12 +78,15 @@ class MenuService
         $branch = [];
 
         foreach ($items as $item) {
-            if ($item->parent_id == $parentId) {
+            $itemParentId = $item->parent_id ? (int) $item->parent_id : null;
+            $targetParentId = $parentId ? (int) $parentId : null;
+
+            if ($itemParentId === $targetParentId) {
                 $children = $this->buildTree($items, $item->id);
                 $branch[] = [
-                    'id' => $item->id,
+                    'id' => (int) $item->id,
                     'title' => $item->title,
-                    'url' => $item->getLink(),
+                    'url' => $item->url ?? '#',
                     'raw_url' => $item->url,
                     'route' => $item->route,
                     'route_params' => $item->route_params,
@@ -92,6 +96,7 @@ class MenuService
                     'bg_color' => $item->bg_color,
                     'css_class' => $item->css_class,
                     'order' => (int) $item->order,
+                    'is_active' => (bool) $item->is_active,
                     'children' => $children,
                 ];
             }
@@ -105,29 +110,15 @@ class MenuService
      */
     public function formatMenu(Menu $menu): array
     {
-        $items = $menu->allItems()->get()->toArray();
-
-        $byId = [];
-        foreach ($items as $it) {
-            $it['children'] = [];
-            $byId[$it['id']] = $it;
-        }
-
-        $tree = [];
-        foreach ($byId as $id => $it) {
-            if ($it['parent_id']) {
-                $byId[$it['parent_id']]['children'][] = &$byId[$id];
-            } else {
-                $tree[] = &$byId[$id];
-            }
-        }
+        $menu->unsetRelation('allItems');
+        $items = $menu->allItems()->get();
 
         return [
-            'id' => $menu->id,
+            'id' => (int) $menu->id,
             'name' => $menu->name,
             'location' => $menu->location,
             'status' => $menu->status,
-            'items' => $tree,
+            'items' => $this->buildTree($items, null),
         ];
     }
 
@@ -137,20 +128,22 @@ class MenuService
     public function saveMenuItems(Menu $menu, array $items, $parentId = null): void
     {
         foreach ($items as $idx => $item) {
+            $url = !empty($item['url']) ? $item['url'] : (!empty($item['raw_url']) ? $item['raw_url'] : '#');
+
             $mi = MenuItem::create([
                 'menu_id' => $menu->id,
                 'parent_id' => $parentId,
                 'title' => $item['title'] ?? 'Untitled',
-                'url' => $item['url'] ?? null,
+                'url' => $url,
                 'route' => $item['route'] ?? null,
-                'route_params' => $item['route_params'] ?? null,
-                'new_tab' => $item['new_tab'] ?? false,
+                'route_params' => isset($item['route_params']) ? (is_array($item['route_params']) ? json_encode($item['route_params']) : $item['route_params']) : null,
+                'new_tab' => filter_var($item['new_tab'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'icon' => $item['icon'] ?? null,
                 'color' => $item['color'] ?? null,
                 'bg_color' => $item['bg_color'] ?? null,
                 'css_class' => $item['css_class'] ?? null,
-                'order' => $item['order'] ?? $idx,
-                'is_active' => $item['is_active'] ?? true,
+                'order' => (int) $idx,
+                'is_active' => filter_var($item['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
             ]);
 
             if (!empty($item['children']) && is_array($item['children'])) {

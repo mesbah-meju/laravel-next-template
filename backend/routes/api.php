@@ -30,13 +30,16 @@ Route::prefix('v1')->group(function () {
         Route::get('health', [HealthController::class, 'check'])->name('health');
         Route::get('menus/{location}', [PublicMenuController::class, 'showByLocation'])->name('menus.location');
         Route::get('settings', [PublicSettingController::class, 'index'])->name('settings.index');
+        Route::post('contact', function () {
+            return response()->json(['success' => true, 'message' => 'Contact message received.']);
+        })->middleware('throttle:6,1')->name('contact');
     });
 
     // 2. AUTHENTICATION ROUTES
     Route::prefix('auth')->name('api.v1.auth.')->group(function () {
-        Route::post('login', [AuthController::class, 'login'])->name('login');
-        Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword'])->name('password.forgot');
-        Route::post('reset-password', [PasswordResetController::class, 'resetPassword'])->name('password.reset');
+        Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1')->name('login');
+        Route::post('forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:6,1')->name('password.forgot');
+        Route::post('reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:6,1')->name('password.reset');
 
         // Authenticated Auth Actions
         Route::middleware('auth:sanctum')->group(function () {

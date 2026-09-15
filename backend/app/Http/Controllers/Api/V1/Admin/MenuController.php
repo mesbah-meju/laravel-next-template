@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Menu;
+use App\Models\MenuItem;
 use App\Services\MenuService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Str;
 
 class MenuController extends Controller
 {
@@ -55,6 +54,8 @@ class MenuController extends Controller
                 'status' => $validated['status'],
             ]);
 
+            MenuItem::where('menu_id', $menu->id)->delete();
+
             if (!empty($validated['items'])) {
                 $this->menuService->saveMenuItems($menu, $validated['items']);
             }
@@ -62,6 +63,7 @@ class MenuController extends Controller
             return $menu;
         });
 
+        $menu->unsetRelation('allItems');
         $this->menuService->clearCache();
 
         return $this->successResponse($this->menuService->formatMenu($menu), 'Menu created successfully.', 201);
@@ -72,6 +74,7 @@ class MenuController extends Controller
      */
     public function show(Menu $menu): JsonResponse
     {
+        $menu->unsetRelation('allItems');
         return $this->successResponse($this->menuService->formatMenu($menu), 'Menu details retrieved successfully.');
     }
 
@@ -90,18 +93,20 @@ class MenuController extends Controller
         DB::transaction(function () use ($validated, $menu) {
             $menu->update([
                 'name' => $validated['name'],
-                'location' => $validated['location'] ?? $menu->location,
+                'location' => array_key_exists('location', $validated) ? $validated['location'] : $menu->location,
                 'status' => $validated['status'],
             ]);
 
-            // Rebuild hierarchy: delete old items and insert updated tree
-            $menu->allItems()->delete();
+            // Reliably delete all existing items for this menu
+            MenuItem::where('menu_id', $menu->id)->delete();
 
             if (!empty($validated['items'])) {
                 $this->menuService->saveMenuItems($menu, $validated['items']);
             }
         });
 
+        $menu->unsetRelation('allItems');
+        $menu->refresh();
         $this->menuService->clearCache();
 
         return $this->successResponse($this->menuService->formatMenu($menu), 'Menu updated successfully.');
@@ -112,6 +117,7 @@ class MenuController extends Controller
      */
     public function destroy(Menu $menu): JsonResponse
     {
+        MenuItem::where('menu_id', $menu->id)->delete();
         $menu->delete();
         $this->menuService->clearCache();
 
