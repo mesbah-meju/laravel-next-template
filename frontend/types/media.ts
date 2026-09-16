@@ -14,3 +14,5 @@ export interface MediaItem {
   } | null;
   created_at: string;
 }
+
+export type Media = MediaItem;

@@ -88,8 +88,19 @@ export function Footer({ navItems, settings }: FooterProps) {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-gray-200 dark:border-gray-800 text-center text-xs text-gray-400 dark:text-gray-500">
+        <div className="pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
           <p>{footerText}</p>
+          <p className="flex items-center gap-1.5 text-xs">
+            <span>Developed by</span>
+            <a
+              href="https://mesbahuddin.info"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center"
+            >
+              Mesbah Uddin
+            </a>
+          </p>
         </div>
       </div>
     </footer>

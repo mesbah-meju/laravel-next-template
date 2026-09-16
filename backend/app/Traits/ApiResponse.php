@@ -38,9 +38,9 @@ trait ApiResponse
     /**
      * Return a standardized paginated JSON response.
      */
-    protected function paginatedResponse($paginator, string $message = 'Data retrieved successfully', int $code = 200): JsonResponse
+    protected function paginatedResponse($paginator, string $message = 'Data retrieved successfully', int $code = 200, array $meta = []): JsonResponse
     {
-        return response()->json([
+        $payload = [
             'success' => true,
             'message' => $message,
             'data' => $paginator->items(),
@@ -52,6 +52,12 @@ trait ApiResponse
                 'total_pages' => $paginator->lastPage(),
                 'has_more' => $paginator->hasMorePages(),
             ],
-        ], $code);
+        ];
+
+        if (!empty($meta)) {
+            $payload['meta'] = $meta;
+        }
+
+        return response()->json($payload, $code);
     }
 }

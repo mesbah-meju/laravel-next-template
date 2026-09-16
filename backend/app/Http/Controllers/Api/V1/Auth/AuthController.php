@@ -12,9 +12,16 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
+use App\Services\ActivityLogger;
+use App\Services\SecurityService;
+
 class AuthController extends Controller
 {
     use ApiResponse;
+
+    public function __construct(
+        protected SecurityService $securityService
+    ) {}
 
     /**
      * Handle user login.
@@ -30,6 +37,12 @@ class AuthController extends Controller
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
+            $this->securityService->recordLoginAttempt(null, 'throttled', $request->input('email'));
+            ActivityLogger::log(
+                action: 'throttled',
+                description: "Login throttled for email: {$request->input('email')}",
+                module: 'auth'
+            );
             return $this->errorResponse(
                 trans('auth.throttle', ['seconds' => $seconds, 'minutes' => ceil($seconds / 60)]),
                 ['email' => [trans('auth.throttle', ['seconds' => $seconds, 'minutes' => ceil($seconds / 60)])]],
@@ -39,6 +52,12 @@ class AuthController extends Controller
 
         if (!Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
             RateLimiter::hit($throttleKey);
+            $this->securityService->recordLoginAttempt(null, 'failed', $request->input('email'));
+            ActivityLogger::log(
+                action: 'failed_login',
+                description: "Failed login attempt for email: {$request->input('email')}",
+                module: 'auth'
+            );
             return $this->errorResponse('Invalid credentials.', [
                 'email' => [trans('auth.failed')],
             ], 422);
@@ -52,6 +71,14 @@ class AuthController extends Controller
         if (!$user->isActive()) {
             Auth::logout();
             $request->session()->invalidate();
+            $this->securityService->recordLoginAttempt($user, 'blocked', $user->email);
+            ActivityLogger::log(
+                action: 'blocked_login',
+                description: "Deactivated user {$user->email} attempted login",
+                module: 'auth',
+                subject: $user,
+                userId: $user->id
+            );
             return $this->errorResponse('Your account has been deactivated. Please contact support.', null, 403);
         }
 
@@ -61,6 +88,16 @@ class AuthController extends Controller
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }
+
+        $this->securityService->recordLoginAttempt($user, 'successful', $user->email);
+
+        ActivityLogger::log(
+            action: 'login',
+            description: "User {$user->name} logged in successfully",
+            module: 'auth',
+            subject: $user,
+            userId: $user->id
+        );
 
         // Return user with roles and permissions
         $user->load('roles.permissions');
@@ -86,6 +123,14 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         if ($user = $request->user()) {
+            ActivityLogger::log(
+                action: 'logout',
+                description: "User {$user->name} logged out",
+                module: 'auth',
+                subject: $user,
+                userId: $user->id
+            );
+
             // Delete current access token if token-based
             if (method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
                 $user->currentAccessToken()->delete();

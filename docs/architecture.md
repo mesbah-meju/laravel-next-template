@@ -1,214 +1,154 @@
-# System & Production Architecture
+# Next.js + Laravel 12 Enterprise Starter Architecture
 
-## 1. High-Level Architecture
+Welcome to the comprehensive architecture guide for the Next.js 15+ and Laravel 12 enterprise starter template. This template provides a solid, decoupled foundation for production-ready SaaS platforms, internal tools, and administrative applications.
 
-This repository is structured as a clean, decoupled monorepo containing a **Laravel 12 API backend** and a **Next.js 15+ App Router frontend**.
+---
+
+## 1. System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Next.js 15+ Frontend                    │
-│  (Public Website, Admin Dashboard, Dynamic Navigation, UI)  │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-               HTTPS / JSON API with Cookies & CSRF
-                               │
-┌──────────────────────────────▼──────────────────────────────┐
-│                    Laravel 12 API Backend                   │
-│  (Sanctum SPA Auth, Spatie Permissions, Menu/Media/Setting) │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-            ┌──────────────────┴──────────────────┐
-            │                                     │
-┌───────────▼───────────┐             ┌───────────▼───────────┐
-│     MySQL Database    │             │  Public Disk Storage  │
-│  (Relational Storage) │             │     (Media Files)     │
-└───────────────────────┘             └───────────────────────┘
+ ┌─────────────────────────────────────────────────────────┐
+ │                   Next.js 15+ Frontend                  │
+ │  (App Router, Tailwind CSS v4, TypeScript, Lucide)      │
+ └────────────────────────────┬────────────────────────────┘
+                              │ HTTP / REST (/api/v1/...)
+                              │ Bearer Token (Sanctum)
+ ┌────────────────────────────▼────────────────────────────┐
+ │                    Laravel 12 Backend                   │
+ │  (REST API, Sanctum Auth, Spatie RBAC, Activity Logs)   │
+ └──────┬─────────────────────┬────────────────────┬───────┘
+        │                     │                    │
+ ┌──────▼──────┐       ┌──────▼──────┐      ┌──────▼───────┐
+ │ MySQL / DB  │       │ Redis/Cache │      │ Queue Worker │
+ └─────────────┘       └─────────────┘      └──────────────┘
 ```
 
 ---
 
-## 2. Directory Structure
+## 2. Backend Architecture (Laravel 12)
 
+### 2.1 Standardized API Responses (`ApiResponse` Trait)
+All API endpoints follow a unified response shape using `App\Traits\ApiResponse`:
+```json
+{
+  "success": true,
+  "message": "Resource retrieved successfully.",
+  "data": { ... },
+  "meta": { "total": 100, "page": 1 }
+}
 ```
-root/
-├── backend/                       # Laravel 12 API Backend (PHP 8.2+)
-│   ├── app/
-│   │   ├── Http/
-│   │   │   ├── Controllers/Api/V1/
-│   │   │   │   ├── Admin/         # Protected Admin Controllers
-│   │   │   │   ├── Auth/          # SPA Authentication Controllers
-│   │   │   │   └── Public/        # Public Anonymous Controllers
-│   │   │   └── Middleware/        # CORS & Stateful API Middleware
-│   │   ├── Models/                # Eloquent Models (User, Menu, MenuItem, Setting, Media)
-│   │   ├── Services/              # Business Logic (MenuService, SettingService, MediaService)
-│   │   └── Traits/                # Standard ApiResponse Trait
-│   ├── config/                    # sanctum.php, cors.php, permission.php, session.php
-│   ├── database/
-│   │   ├── migrations/            # Clean system migrations
-│   │   └── seeders/               # Role, User, Setting, Menu seeders
-│   ├── routes/
-│   │   ├── api.php                # Clean /api/v1/ route definitions
-│   │   └── web.php                # CSRF cookie bootstrap routes
-│   └── tests/                     # 33 Unit & Feature API tests
-│
-├── frontend/                      # Next.js 15+ App Router (TypeScript + Tailwind)
-│   ├── app/
-│   │   ├── (admin)/               # Authenticated Control Panel
-│   │   │   ├── admin/             # Dashboard, Users, Roles, Menus, Media, Settings, Profile
-│   │   │   └── layout.tsx         # Sidebar, Topbar, Protected Route Guard
-│   │   ├── (auth)/                # Unlisted Admin Authentication Routes
-│   │   │   ├── admin-login/       # Secure Login Form
-│   │   │   ├── forgot-password/   # Password Reset Request
-│   │   │   └── reset-password/    # Password Reset Submission
-│   │   ├── (public)/              # Public Dynamic Website
-│   │   │   ├── layout.tsx         # Dynamic Header & Footer from Backend API
-│   │   │   └── page.tsx           # Modern Landing Page with Live API Check
-│   │   ├── error.tsx              # Application error boundary
-│   │   ├── not-found.tsx          # 404 page
-│   │   ├── robots.ts              # Dynamic robots.txt
-│   │   └── sitemap.ts             # Dynamic sitemap.xml
-│   ├── components/
-│   │   ├── admin/                 # DataTable, Pagination, Modal, ImagePicker, FileUploader
-│   │   ├── public/                # DynamicNav, Header, Footer
-│   │   └── ui/                    # Button, Input, Select, Switch, StatusBadge, ThemeToggle
-│   ├── hooks/                     # useAuth, useToast, useDebounce
-│   ├── lib/                       # api.ts (Sanctum Axios client), gsap.ts, utils.ts
-│   ├── providers/                 # AuthProvider, ThemeProvider, ToastProvider
-│   ├── services/                  # Typed API Services (auth, user, role, menu, setting, media)
-│   └── types/                     # TypeScript Interfaces
-│
-├── docs/                          # Comprehensive Documentation
-│   ├── architecture.md
-│   ├── getting-started.md
-│   ├── api-reference.md
-│   ├── api.md
-│   └── adding-crud-modules.md
-└── package.json                   # Monorepo convenience scripts
-```
-
----
-
-## 3. Core Subsystems
-
-### A. Sanctum SPA Cookie-Based Authentication
-* **No JWT & No localStorage tokens**: Authentication relies on encrypted HTTP-only session cookies (`laravel_session` and `XSRF-TOKEN`).
-* **CSRF Flow**: Before any mutating request (`POST`, `PUT`, `PATCH`, `DELETE`), the Next.js Axios client automatically requests `GET /sanctum/csrf-cookie` and attaches the `X-XSRF-TOKEN` header.
-* **Stateful Domains**: Configured in `backend/config/sanctum.php` to trust configured frontend domains.
-
-### B. Spatie Role & Permission Authorization
-* Built-in roles: `Super Admin`, `Admin`, `User`.
-* `Super Admin` possesses server-authoritative bypass for all permissions.
-* Granular permissions: `view-dashboard`, `manage-users`, `manage-roles`, `manage-permissions`, `manage-menus`, `manage-settings`, `manage-media`.
-* Authorization is enforced server-side via Laravel middleware (`permission:manage-users`, etc.).
-
-### C. Hierarchical Menu Builder
-* Supports recursive parent-child item nesting (`parent_id`).
-* Cached for 24 hours (`Cache::rememberForever("menu_loc_{$location}")`).
-* Instant cache invalidation whenever an administrator saves menu changes.
-* Delivered to Next.js via public endpoint `GET /api/v1/public/menus/{location}`.
-
-### D. Media Manager & Asset Security
-* Files are uploaded to `storage/app/public/media/` with randomized, slugged timestamps.
-* MIME types and file extensions are strictly validated to prevent executable uploads.
-* Assets are exposed via symlink `/storage/media/{filename}`.
-* Reusable `ImagePicker` dialog connects to the media library for instant asset selection.
-
-### E. Dynamic Site Settings
-* Key-value configuration store with public/private segregation (`is_public = true`).
-* Public settings (site name, logo, description, social links) cached for 24 hours.
-* Private settings (credentials, internal configs) restricted to authenticated administrators.
-
----
-
-## 4. Production Deployment Architectures
-
-### Strategy A: Single Domain Reverse Proxy (Recommended)
-
-In this setup, both Next.js and Laravel share the same top-level domain via an Nginx reverse proxy. This completely eliminates third-party cookie restrictions and simplifies CORS.
-
-* `https://example.com` ➔ Next.js App Router (Node server on port 3000)
-* `https://example.com/api/*` ➔ Laravel API (PHP-FPM / FastCGI on port 9000 or Laravel Octane)
-* `https://example.com/sanctum/*` ➔ Laravel Sanctum CSRF / cookie exchange
-* `https://example.com/storage/*` ➔ Laravel Public Storage symlink
-
-#### Example Nginx Configuration (`example.com.conf`):
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name example.com;
-
-    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
-
-    # 1. Laravel API & Sanctum
-    location ~ ^/(api|sanctum) {
-        root /var/www/my-app/backend/public;
-        try_files $uri $uri/ /index.php?$query_string;
-
-        location ~ \.php$ {
-            include fastcgi_params;
-            fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
-            fastcgi_param SCRIPT_FILENAME /var/www/my-app/backend/public/index.php;
-        }
-    }
-
-    # 2. Public Uploaded Storage Files
-    location /storage {
-        alias /var/www/my-app/backend/storage/app/public;
-        try_files $uri $uri/ =404;
-        expires 30d;
-        access_log off;
-    }
-
-    # 3. Next.js Frontend Application
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
+In case of errors:
+```json
+{
+  "success": false,
+  "message": "Validation failed.",
+  "errors": {
+    "email": ["The email field is required."]
+  }
 }
 ```
 
-#### Environment Configuration for Strategy A:
-* **`backend/.env`**:
-  ```env
-  APP_URL=https://example.com
-  FRONTEND_URL=https://example.com
-  SANCTUM_STATEFUL_DOMAINS=example.com
-  SESSION_DOMAIN=.example.com
-  SESSION_SECURE_COOKIE=true
-  CORS_ALLOWED_ORIGINS=https://example.com
-  ```
-* **`frontend/.env.local`**:
-  ```env
-  NEXT_PUBLIC_API_URL=https://example.com
-  NEXT_PUBLIC_SITE_URL=https://example.com
-  ```
+### 2.2 Security & Authentication
+- **Authentication**: Laravel Sanctum stateful and Bearer token issuance.
+- **Role-Based Access Control (RBAC)**: Powered by `spatie/laravel-permission` (v6.x) with granular capability keys (e.g., `view-users`, `manage-roles`, `view-activity-logs`).
+- **Security Service (`App\Services\SecurityService`)**:
+  - Parses User Agents to capture browser, operating system, and device type.
+  - Tracks login histories in `login_histories` table (IP, status, failure reasons).
+  - Manages active personal access tokens, allowing remote termination or "Logout other devices".
+
+### 2.3 Activity & Audit Logging (`App\Services\ActivityLogger`)
+- **Automated Model Tracking**: Attach `App\Traits\LogsActivity` to Eloquent models to capture `created`, `updated`, and `deleted` events with dirty attribute diffs (`old` vs `new`).
+- **Sensitive Data Masking**: Automatically masks sensitive fields (e.g. `password`, `token`, `secret`, `api_key`, `credentials`) with `********`.
+- **Search & Purge**: Activity log API supports filtering by actor, module, action, date ranges, and log retention pruning (`/api/v1/admin/activity-logs/purge`).
+
+### 2.4 Extensible Settings (`App\Services\SettingService`)
+- Cached key-value settings storage (`site_settings` table).
+- Categorized sections: `general`, `branding`, `localization`, `email`, `notifications`, `security`.
+- Sensitive keys (`mail_password`, `api_secret`) masked on fetch (`••••••••`).
+- Real-time SMTP validation test endpoint (`/api/v1/admin/settings/test-email`).
+
+### 2.5 System Health & Background Jobs
+- **Health Diagnostics (`/api/v1/admin/system/health`)**: Reports real-time status of PHP runtime, DB query latency, Cache driver, Queue backlogs, and disk storage usage.
+- **Queue & Failed Jobs (`/api/v1/admin/system/jobs`)**: Lists failed queue jobs with full exception traces, single retry, batch retry, and purge actions.
+
+### 2.6 Module Registration Architecture (`App\Support\ModuleRegistry`)
+Allows plug-and-play modules to register permissions, dashboard metrics, and custom widgets:
+```php
+use App\Support\ModuleRegistry;
+
+ModuleRegistry::register('ecommerce', [
+    'name' => 'E-Commerce',
+    'permissions' => ['view-orders', 'manage-orders'],
+    'stats' => fn() => ['total_orders' => \App\Models\Order::count()],
+    'widgets' => fn() => [
+        ['id' => 'revenue-card', 'title' => 'Monthly Revenue', 'value' => '$42,500', 'subtext' => '+14% vs last month']
+    ],
+]);
+```
 
 ---
 
-### Strategy B: Subdomain Architecture (`api.example.com` + `example.com`)
+## 3. Frontend Architecture (Next.js 15 App Router)
 
-If the API is hosted on a separate subdomain from the frontend:
+### 3.1 Styling & Theme System
+- Built with **Tailwind CSS v4** and `@tailwindcss/postcss`.
+- Native Light & Dark theme support via `next-themes`.
+- High-contrast, accessible palettes with glassmorphic cards and smooth transitions.
 
-* `https://example.com` ➔ Next.js Frontend
-* `https://api.example.com` ➔ Laravel Backend
+### 3.2 Reusable Admin Components
+- **`DataTable<T>` (`components/admin/DataTable.tsx`)**:
+  - Server-side sorting, pagination, and search.
+  - Multi-row checkbox selection with bulk action bar.
+  - Column visibility toggle menu.
+  - CSV export helper.
+  - Skeleton loading and error retry states.
+- **`useApiForm` & `FormField` (`hooks/useApiForm.ts`, `components/ui/FormField.tsx`)**:
+  - Automatic extraction of Laravel validation errors from HTTP 422 responses.
+  - Field-level error messages attached directly to matching input fields.
+  - Automatic toast feedback.
+- **`DeleteDialog` (`components/admin/DeleteDialog.tsx`)**:
+  - Accessible confirmation modal with optional danger verification input.
+- **`MediaPicker` (`components/admin/MediaPicker.tsx`)**:
+  - Integrated with backend Media Manager for selecting or uploading files directly in forms.
 
-#### Configuration Requirements for Strategy B:
-1. **Shared Session Cookie Domain**:
-   `SESSION_DOMAIN=.example.com` (note the leading dot) allows session cookies issued by `api.example.com` to be sent by the browser on requests originating from `example.com`.
-2. **Stateful Domains**:
-   `SANCTUM_STATEFUL_DOMAINS=example.com,api.example.com`
-3. **CORS Headers**:
-   ```env
-   CORS_ALLOWED_ORIGINS=https://example.com
-   ```
-   With `supports_credentials => true` enabled in `config/cors.php`.
-4. **Cookie Security**:
-   `SESSION_SECURE_COOKIE=true` and `SESSION_SAME_SITE=lax` (or `none` if across different root domains).
+### 3.3 Localization (`lib/i18n.ts` & `providers/LocaleProvider.tsx`)
+- Multi-language dictionary support (`en`, `es`, `fr`, `ar`).
+- Dynamic RTL direction detection for Arabic (`dir="rtl"`).
+- Currency and date formatting helpers.
+- Synchronized with backend `SetLocale` middleware via the `X-Locale` header.
+
+### 3.4 Command Palette (`components/admin/CommandPalette.tsx`)
+- Triggerable via `Ctrl+K` or `Cmd+K`.
+- Fast fuzzy searching across all system routes, permissions, settings, and quick actions.
+- Automatically incorporates custom actions registered by third-party modules.
+
+### 3.5 Dynamic Module Registry (`lib/moduleRegistry.ts`)
+Frontend modules can extend the administration UI without modifying core layouts:
+```typescript
+import { moduleRegistry } from '@/lib/moduleRegistry';
+import { ShoppingBag } from 'lucide-react';
+
+moduleRegistry.register({
+  id: 'ecommerce',
+  name: 'E-Commerce',
+  navItems: [
+    {
+      label: 'Store',
+      icon: ShoppingBag,
+      children: [
+        { label: 'Products', href: '/admin/products', permission: 'manage-products' },
+        { label: 'Orders', href: '/admin/orders', permission: 'manage-orders' },
+      ],
+    },
+  ],
+  commandItems: [
+    {
+      id: 'nav-products',
+      title: 'Manage Products',
+      category: 'Store',
+      icon: ShoppingBag,
+      href: '/admin/products',
+    },
+  ],
+});
+```

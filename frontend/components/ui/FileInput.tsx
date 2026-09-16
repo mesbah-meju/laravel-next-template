@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
+import * as LabelPrimitive from '@radix-ui/react-label';
 import { UploadCloud, FileIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +13,7 @@ export interface FileInputProps {
   error?: string;
   disabled?: boolean;
   className?: string;
+  required?: boolean;
 }
 
 export function FileInput({
@@ -21,6 +23,7 @@ export function FileInput({
   accept = '*/*',
   error,
   disabled = false,
+  required = false,
   className,
 }: FileInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,11 +38,12 @@ export function FileInput({
     value instanceof File ? value.name : typeof value === 'string' ? value.split('/').pop() : null;
 
   return (
-    <div className={cn('space-y-1.5', className)}>
+    <div className={cn('w-full space-y-2 text-left', className)}>
       {label && (
-        <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-          {label}
-        </label>
+        <LabelPrimitive.Root className="text-sm font-medium leading-none text-gray-900 dark:text-gray-100 peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1">
+          <span>{label}</span>
+          {required && <span className="text-rose-500 font-bold">*</span>}
+        </LabelPrimitive.Root>
       )}
 
       <input
@@ -52,7 +56,7 @@ export function FileInput({
       />
 
       {fileName ? (
-        <div className="flex items-center justify-between p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-xs">
+        <div className="flex items-center justify-between p-2.5 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-xs shadow-2xs">
           <div className="flex items-center gap-2 min-w-0">
             <FileIcon className="w-4 h-4 text-indigo-500 shrink-0" />
             <span className="font-medium text-gray-800 dark:text-gray-200 truncate">{fileName}</span>
@@ -64,7 +68,7 @@ export function FileInput({
                 onChange(null);
                 if (inputRef.current) inputRef.current.value = '';
               }}
-              className="p-1 rounded-lg text-gray-400 hover:text-rose-500 transition"
+              className="p-1 rounded-xs text-gray-400 hover:text-rose-500 transition cursor-pointer"
               title="Remove file"
             >
               <X className="w-3.5 h-3.5" />
@@ -75,16 +79,16 @@ export function FileInput({
         <div
           onClick={() => !disabled && inputRef.current?.click()}
           className={cn(
-            'flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 text-xs text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700 cursor-pointer transition',
-            disabled && 'opacity-60 cursor-not-allowed'
+            'flex items-center justify-center gap-2 p-4 rounded-md border border-dashed border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40 text-xs text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700 cursor-pointer transition select-none',
+            disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
           )}
         >
           <UploadCloud className="w-4 h-4 text-gray-400" />
-          <span>Click to select a file</span>
+          <span>Click to select or upload a file</span>
         </div>
       )}
 
-      {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
+      {error && <p className="text-xs font-medium text-rose-600 dark:text-rose-400">{error}</p>}
     </div>
   );
 }

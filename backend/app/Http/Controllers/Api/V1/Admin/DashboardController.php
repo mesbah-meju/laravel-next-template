@@ -10,6 +10,8 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Spatie\Permission\Models\Role;
 
+use App\Support\ModuleRegistry;
+
 class DashboardController extends Controller
 {
     use ApiResponse;
@@ -32,18 +34,23 @@ class DashboardController extends Controller
 
         $recentMedia = Media::latest()
             ->take(6)
-            ->get(['id', 'name', 'url', 'mime_type', 'size', 'created_at']);
+            ->get(['id', 'name', 'file_name', 'path', 'disk', 'url', 'mime_type', 'size', 'created_at']);
+
+        $moduleStats = ModuleRegistry::collectStats();
+        $moduleWidgets = ModuleRegistry::collectWidgets();
 
         return $this->successResponse([
-            'stats' => [
+            'stats' => array_merge([
                 'total_users' => $totalUsers,
                 'active_users' => $activeUsers,
                 'total_roles' => $totalRoles,
                 'total_menus' => $totalMenus,
                 'total_media' => $totalMedia,
-            ],
+            ], $moduleStats),
             'recent_users' => $recentUsers,
             'recent_media' => $recentMedia,
+            'custom_widgets' => $moduleWidgets,
         ], 'Dashboard statistics retrieved successfully.');
     }
 }
+

@@ -32,6 +32,14 @@ class Media extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function getUrlAttribute(?string $value): string
+    {
+        if ($this->path) {
+            return \Illuminate\Support\Facades\Storage::disk($this->disk ?: 'public')->url($this->path);
+        }
+        return $value ?: '';
+    }
+
     public function getFormattedSizeAttribute(): string
     {
         $bytes = $this->size;

@@ -10,9 +10,9 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 
 export default function AdminLoginPage() {
-  const [email, setEmail] = useState('admin@example.com');
-  const [password, setPassword] = useState('password');
-  const [remember, setRemember] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -118,15 +118,7 @@ export default function AdminLoginPage() {
             </Button>
           </form>
 
-          {/* Development Hint Notice */}
-          <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200 text-xs space-y-1">
-            <p className="font-semibold flex items-center gap-1.5">
-              <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" /> Default Starter Credentials:
-            </p>
-            <p className="font-mono text-[11px] opacity-90">
-              admin@example.com / password
-            </p>
-          </div>
+
         </div>
 
         <div className="text-center text-xs text-gray-400">

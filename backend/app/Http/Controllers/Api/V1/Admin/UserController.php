@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
+use App\Services\ActivityLogger;
+
 class UserController extends Controller
 {
     use ApiResponse;
@@ -75,6 +77,19 @@ class UserController extends Controller
 
         $user->load('roles:id,name');
 
+        ActivityLogger::log(
+            action: 'created',
+            description: "Created user account: {$user->name} ({$user->email})",
+            module: 'users',
+            subject: $user,
+            newValues: [
+                'name' => $user->name,
+                'email' => $user->email,
+                'status' => $user->status,
+                'roles' => $validated['roles'] ?? [],
+            ]
+        );
+
         return $this->successResponse($user, 'User created successfully.', 201);
     }
 
@@ -103,6 +118,13 @@ class UserController extends Controller
             'roles.*' => 'string|exists:roles,name',
         ]);
 
+        $oldValues = [
+            'name' => $user->name,
+            'email' => $user->email,
+            'status' => $user->status,
+            'roles' => $user->getRoleNames()->toArray(),
+        ];
+
         $updateData = [
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -122,6 +144,20 @@ class UserController extends Controller
 
         $user->load('roles:id,name');
 
+        ActivityLogger::log(
+            action: 'updated',
+            description: "Updated user account: {$user->name}",
+            module: 'users',
+            subject: $user,
+            oldValues: $oldValues,
+            newValues: [
+                'name' => $user->name,
+                'email' => $user->email,
+                'status' => $user->status,
+                'roles' => $validated['roles'] ?? $oldValues['roles'],
+            ]
+        );
+
         return $this->successResponse($user, 'User updated successfully.');
     }
 
@@ -138,7 +174,17 @@ class UserController extends Controller
             return $this->errorResponse('You cannot deactivate or suspend your own account.', null, 403);
         }
 
+        $oldStatus = $user->status;
         $user->update(['status' => $request->input('status')]);
+
+        ActivityLogger::log(
+            action: 'status_changed',
+            description: "Changed status of {$user->name} from {$oldStatus} to {$user->status}",
+            module: 'users',
+            subject: $user,
+            oldValues: ['status' => $oldStatus],
+            newValues: ['status' => $user->status]
+        );
 
         return $this->successResponse($user, 'User status updated successfully.');
     }
@@ -153,7 +199,19 @@ class UserController extends Controller
             return $this->errorResponse('You cannot delete your own account.', null, 403);
         }
 
+        $deletedUserCopy = $user->replicate();
         $user->delete();
+
+        ActivityLogger::log(
+            action: 'deleted',
+            description: "Deleted user account: {$deletedUserCopy->name} ({$deletedUserCopy->email})",
+            module: 'users',
+            oldValues: [
+                'id' => $deletedUserCopy->id,
+                'name' => $deletedUserCopy->name,
+                'email' => $deletedUserCopy->email,
+            ]
+        );
 
         return $this->successResponse(null, 'User deleted successfully.');
     }

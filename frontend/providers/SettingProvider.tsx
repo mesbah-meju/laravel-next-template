@@ -36,17 +36,6 @@ export function SettingProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           ...res.data,
         }));
-
-        // Dynamically update document favicon if available in client
-        if (typeof document !== 'undefined' && res.data.site_favicon) {
-          let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
-          if (!link) {
-            link = document.createElement('link');
-            link.rel = 'icon';
-            document.head.appendChild(link);
-          }
-          link.href = res.data.site_favicon;
-        }
       }
     } catch {
       // Fallback
@@ -58,6 +47,37 @@ export function SettingProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshSettings();
   }, [refreshSettings]);
+
+  // Synchronize document favicon and head icons dynamically
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    if (settings.site_favicon) {
+      const faviconUrl = settings.site_favicon;
+      const existingIcons = document.querySelectorAll("link[rel*='icon'], link[rel='apple-touch-icon']");
+      existingIcons.forEach((el) => el.remove());
+
+      const icon = document.createElement('link');
+      icon.rel = 'icon';
+      icon.type = faviconUrl.endsWith('.svg')
+        ? 'image/svg+xml'
+        : faviconUrl.endsWith('.png')
+        ? 'image/png'
+        : 'image/x-icon';
+      icon.href = faviconUrl;
+      document.head.appendChild(icon);
+
+      const shortcut = document.createElement('link');
+      shortcut.rel = 'shortcut icon';
+      shortcut.href = faviconUrl;
+      document.head.appendChild(shortcut);
+
+      const apple = document.createElement('link');
+      apple.rel = 'apple-touch-icon';
+      apple.href = faviconUrl;
+      document.head.appendChild(apple);
+    }
+  }, [settings.site_favicon]);
 
   return (
     <SettingContext.Provider value={{ settings, isLoading, refreshSettings }}>

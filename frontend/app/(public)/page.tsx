@@ -23,6 +23,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { settingService } from '@/services/settingService';
 import { menuService } from '@/services/menuService';
 import { Button } from '@/components/ui/Button';
+import { JsonLd } from '@/components/seo/JsonLd';
 
 interface HealthCheckState {
   status: 'checking' | 'connected' | 'error';
@@ -142,9 +143,18 @@ export default function FoundationStatusPage() {
     : 'User';
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-8">
-      {/* Verification Marker Badge */}
-      <div className="text-center space-y-3">
+    <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-8">
+      {/* Structured Data JSON-LD for Search Engines */}
+      <JsonLd
+        schema={{
+          type: 'WebSite',
+          name: 'NextLaravel Enterprise Starter',
+          url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+        }}
+      />
+
+      {/* Verification Marker Badge & Header */}
+      <header className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 text-xs font-bold tracking-wider text-emerald-800 dark:text-emerald-300 uppercase shadow-sm">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           MESBAH NEXT STARTER ACTIVE
@@ -168,7 +178,7 @@ export default function FoundationStatusPage() {
             <Lock className="w-3.5 h-3.5" /> {isAuthenticated ? 'Admin Dashboard' : 'Admin Login'}
           </Link>
         </div>
-      </div>
+      </header>
 
       {/* Control Actions Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
@@ -430,6 +440,6 @@ export default function FoundationStatusPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

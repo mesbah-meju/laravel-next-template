@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, Shield, UserCheck, UserX, Mail, Lock } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield, UserCheck, UserX, Mail, Lock, LogIn } from 'lucide-react';
 import { userService } from '@/services/userService';
 import { roleService } from '@/services/roleService';
+import { impersonationService } from '@/services/impersonationService';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -24,10 +25,12 @@ import { FormError } from '@/components/ui/FormError';
 import { formatDate } from '@/lib/utils';
 import { User, UserStatus, Role } from '@/types/user';
 import { PaginationMeta } from '@/types/api';
+import { BulkActionBar } from '@/components/admin/BulkActionBar';
 
-export default function UsersManagementPage() {
+export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [meta, setMeta] = useState<PaginationMeta>({
     total: 0,
     count: 0,
@@ -269,6 +272,25 @@ export default function UsersManagementPage() {
           <div className="flex items-center justify-end gap-1.5">
             {!isSelf && (
               <button
+                onClick={async () => {
+                  if (confirm(`Start impersonating ${u.name}?`)) {
+                    try {
+                      await impersonationService.start(u.id);
+                      toast.success('Impersonating', `Now viewing system as ${u.name}`);
+                      window.location.href = '/admin';
+                    } catch (err: unknown) {
+                      toast.error('Impersonate Failed', (err as { message?: string })?.message);
+                    }
+                  }
+                }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition"
+                title={`Impersonate ${u.name}`}
+              >
+                <LogIn className="w-4 h-4 text-amber-500" />
+              </button>
+            )}
+            {!isSelf && (
+              <button
                 onClick={() => promptToggleStatus(u)}
                 className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                 title={u.status === 'active' ? 'Deactivate user' : 'Activate user'}
@@ -361,8 +383,37 @@ export default function UsersManagementPage() {
           </div>
         </FilterBar>
 
+        {/* Bulk Action Bar */}
+        <BulkActionBar
+          resource="users"
+          selectedIds={selectedIds}
+          onClearSelection={() => setSelectedIds([])}
+          onSuccess={() => {
+            setSelectedIds([]);
+            fetchUsers();
+          }}
+        />
+
         {/* Data Table */}
-        <DataTable columns={columns} data={users} isLoading={isLoading} />
+        <DataTable
+          columns={columns}
+          data={users}
+          isLoading={isLoading}
+          selectable
+          selectedIds={selectedIds}
+          onSelectRow={(id) => {
+            setSelectedIds((prev) =>
+              prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+            );
+          }}
+          onSelectAll={(selectAll) => {
+            if (selectAll) {
+              setSelectedIds(users.map((u) => u.id));
+            } else {
+              setSelectedIds([]);
+            }
+          }}
+        />
 
         {/* Pagination */}
         <Pagination meta={meta} onPageChange={setPage} />

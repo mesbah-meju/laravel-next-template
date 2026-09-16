@@ -5,6 +5,8 @@ import { ThemeProvider } from '@/providers/ThemeProvider';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { ToastProvider } from '@/providers/ToastProvider';
 import { SettingProvider } from '@/providers/SettingProvider';
+import { LocaleProvider } from '@/providers/LocaleProvider';
+import { BreadcrumbProvider } from '@/providers/BreadcrumbProvider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -13,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   try {
     const res = await fetch(`${apiUrl}/api/v1/public/settings`, {
-      next: { revalidate: 60 },
+      cache: 'no-store',
     });
 
     if (res.ok) {
@@ -64,11 +66,15 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <body suppressHydrationWarning className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans antialiased transition-colors duration-200">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AuthProvider>
-            <SettingProvider>
-              <ToastProvider>{children}</ToastProvider>
-            </SettingProvider>
-          </AuthProvider>
+          <LocaleProvider>
+            <AuthProvider>
+              <SettingProvider>
+                <BreadcrumbProvider>
+                  <ToastProvider>{children}</ToastProvider>
+                </BreadcrumbProvider>
+              </SettingProvider>
+            </AuthProvider>
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>

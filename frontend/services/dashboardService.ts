@@ -9,12 +9,21 @@ export interface DashboardStats {
   total_roles: number;
   total_menus: number;
   total_media: number;
+  [key: string]: number | string | undefined;
 }
 
 export interface DashboardData {
   stats: DashboardStats;
   recent_users: User[];
   recent_media: MediaItem[];
+  custom_widgets?: Array<{
+    module: string;
+    id: string;
+    title: string;
+    value?: string | number;
+    subtext?: string;
+    [key: string]: any;
+  }>;
 }
 
 export const dashboardService = {

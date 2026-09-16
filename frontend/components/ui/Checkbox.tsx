@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
+import * as LabelPrimitive from '@radix-ui/react-label';
+import { Check, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
@@ -8,7 +11,8 @@ export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputE
   description?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
-  error?: string;
+  indeterminate?: boolean;
+  error?: string | string[];
 }
 
 export function Checkbox({
@@ -16,35 +20,82 @@ export function Checkbox({
   description,
   checked,
   onChange,
+  indeterminate = false,
   error,
   className,
-  disabled,
+  disabled = false,
+  id,
   ...props
 }: CheckboxProps) {
+  const checkboxId = id || (typeof label === 'string' ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const errorMessage = Array.isArray(error) ? error[0] : error;
+
   return (
-    <div className={cn('space-y-1', className)}>
-      <label
+    <div className={cn('space-y-1.5 text-left', className)}>
+      <div
         className={cn(
-          'inline-flex items-start gap-2.5 cursor-pointer select-none text-xs text-gray-700 dark:text-gray-300',
-          disabled && 'opacity-60 cursor-not-allowed'
+          'inline-flex items-start gap-2.5 select-none',
+          disabled && 'opacity-50 cursor-not-allowed'
         )}
       >
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => !disabled && onChange(e.target.checked)}
+        <CheckboxPrimitive.Root
+          id={checkboxId}
+          checked={indeterminate ? 'indeterminate' : checked}
+          onCheckedChange={(state) => {
+            if (!disabled) {
+              onChange(state === true || state === 'indeterminate');
+            }
+          }}
           disabled={disabled}
-          className="mt-0.5 rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500/20 bg-white dark:bg-gray-900 cursor-pointer"
-          {...props}
-        />
+          aria-invalid={!!errorMessage}
+          aria-describedby={errorMessage ? `${checkboxId}-error` : undefined}
+          className={cn(
+            'mt-0.5 h-4 w-4 shrink-0 rounded-xs border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-2xs transition-colors flex items-center justify-center',
+            'hover:border-gray-400 dark:hover:border-gray-600',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1',
+            'data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600',
+            'data-[state=indeterminate]:bg-indigo-600 data-[state=indeterminate]:border-indigo-600',
+            'disabled:cursor-not-allowed',
+            errorMessage && 'border-rose-500'
+          )}
+          {...(props as Omit<React.ComponentProps<typeof CheckboxPrimitive.Root>, 'checked' | 'onCheckedChange' | 'disabled'>)}
+        >
+          <CheckboxPrimitive.Indicator className="text-white flex items-center justify-center">
+            {indeterminate ? (
+              <Minus className="h-3 w-3 stroke-[3]" />
+            ) : (
+              <Check className="h-3 w-3 stroke-[3]" />
+            )}
+          </CheckboxPrimitive.Indicator>
+        </CheckboxPrimitive.Root>
+
         {(label || description) && (
-          <div>
-            {label && <span className="font-medium text-gray-800 dark:text-gray-200 block">{label}</span>}
-            {description && <span className="text-[11px] text-gray-400 block">{description}</span>}
+          <div className="leading-tight">
+            {label && (
+              <LabelPrimitive.Root
+                htmlFor={checkboxId}
+                className={cn(
+                  'text-sm font-medium leading-none text-gray-900 dark:text-gray-100 cursor-pointer',
+                  disabled && 'cursor-not-allowed'
+                )}
+              >
+                {label}
+              </LabelPrimitive.Root>
+            )}
+            {description && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {description}
+              </p>
+            )}
           </div>
         )}
-      </label>
-      {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
+      </div>
+
+      {errorMessage && (
+        <p id={`${checkboxId}-error`} role="alert" className="text-xs font-medium text-rose-600 dark:text-rose-400">
+          {errorMessage}
+        </p>
+      )}
     </div>
   );
 }

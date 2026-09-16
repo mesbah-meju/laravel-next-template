@@ -13,6 +13,8 @@ import { FormError } from '@/components/ui/FormError';
 import { FormSection } from '@/components/ui/FormSection';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
+import { PasswordInput } from '@/components/ui/PasswordInput';
+
 export default function AdminProfilePage() {
   const { user, refreshUser } = useAuth();
   const toast = useToast();
@@ -105,47 +107,47 @@ export default function AdminProfilePage() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* User Profile Card */}
+        {/* User Profile Summary Card */}
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm space-y-6 flex flex-col items-center text-center">
+          <div className="p-6 rounded-xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xs space-y-5 flex flex-col items-center text-center">
             <div className="relative">
               {profileForm.avatar ? (
                 <img
                   src={profileForm.avatar}
                   alt={profileForm.name}
-                  className="w-24 h-24 rounded-2xl object-cover shadow-md border-2 border-indigo-600"
+                  className="w-20 h-20 rounded-xl object-cover ring-2 ring-indigo-600/20"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-3xl font-bold shadow-md">
+                <div className="w-20 h-20 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-2xl font-bold shadow-xs">
                   {profileForm.name.charAt(0) || 'A'}
                 </div>
               )}
             </div>
 
-            <div className="space-y-1">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{user?.name}</h3>
+            <div className="space-y-0.5">
+              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{user?.name}</h3>
               <p className="text-xs text-gray-400">{user?.email}</p>
             </div>
 
-            <div className="w-full pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs">
-              <span className="text-gray-500">System Role:</span>
+            <div className="w-full pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs">
+              <span className="text-gray-500">System Role</span>
               <span className="font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
                 <Shield className="w-3.5 h-3.5" /> {roleNames}
               </span>
             </div>
 
             <div className="w-full flex items-center justify-between text-xs">
-              <span className="text-gray-500">Account Status:</span>
+              <span className="text-gray-500">Account Status</span>
               <StatusBadge status={user?.status || 'active'} />
             </div>
           </div>
 
-          {/* Permissions Overview (Read-Only) */}
-          <div className="p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+          {/* Permissions Overview */}
+          <div className="p-5 rounded-xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xs space-y-3">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
               Active Permissions
             </h4>
-            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto custom-scrollbar">
               {roleNames.includes('Super Admin') ? (
                 <span className="text-[11px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold px-2 py-0.5 rounded-md">
                   * Unrestricted Super Admin Authority
@@ -176,28 +178,30 @@ export default function AdminProfilePage() {
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <FormError message={generalProfileError} errors={profileErrors} />
 
-              <Input
-                label="Full Name"
-                value={profileForm.name}
-                onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                placeholder="John Doe"
-                error={profileErrors.name?.[0]}
-                required
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Full Name"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                  placeholder="John Doe"
+                  error={profileErrors.name?.[0]}
+                  required
+                />
 
-              <Input
-                label="Email Address"
-                type="email"
-                value={profileForm.email}
-                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                placeholder="john@example.com"
-                leftIcon={<Mail className="w-4 h-4" />}
-                error={profileErrors.email?.[0]}
-                required
-              />
+                <Input
+                  label="Email Address"
+                  type="email"
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                  placeholder="john@example.com"
+                  leftIcon={<Mail className="w-4 h-4" />}
+                  error={profileErrors.email?.[0]}
+                  required
+                />
+              </div>
 
               <ImagePicker
-                label="Profile Avatar"
+                label="Profile Avatar Image"
                 value={profileForm.avatar}
                 onChange={(url) => setProfileForm({ ...profileForm, avatar: url })}
               />
@@ -216,36 +220,31 @@ export default function AdminProfilePage() {
             <form onSubmit={handleUpdatePassword} className="space-y-4">
               <FormError message={generalPasswordError} errors={passwordErrors} />
 
-              <Input
+              <PasswordInput
                 label="Current Password"
-                type="password"
                 value={passwordForm.current_password}
                 onChange={(e) => setPasswordForm({ ...passwordForm, current_password: e.target.value })}
                 placeholder="••••••••"
-                leftIcon={<Lock className="w-4 h-4" />}
                 error={passwordErrors.current_password?.[0]}
                 required
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
+                <PasswordInput
                   label="New Password"
-                  type="password"
                   value={passwordForm.password}
                   onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
                   placeholder="••••••••"
-                  leftIcon={<Lock className="w-4 h-4" />}
                   error={passwordErrors.password?.[0]}
+                  showRequirements
                   required
                 />
 
-                <Input
+                <PasswordInput
                   label="Confirm New Password"
-                  type="password"
                   value={passwordForm.password_confirmation}
                   onChange={(e) => setPasswordForm({ ...passwordForm, password_confirmation: e.target.value })}
                   placeholder="••••••••"
-                  leftIcon={<Lock className="w-4 h-4" />}
                   error={passwordErrors.password_confirmation?.[0]}
                   required
                 />

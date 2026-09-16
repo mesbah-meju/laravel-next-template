@@ -34,6 +34,7 @@ export default function MenuBuilderPage() {
 
   // Menu Creation/Editing Modal
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
+  const [editingMenuId, setEditingMenuId] = useState<number | string | null>(null);
   const [menuForm, setMenuForm] = useState({ name: '', location: 'header', status: 'active' as 'active' | 'inactive' });
 
   // Item Modal
@@ -50,6 +51,8 @@ export default function MenuBuilderPage() {
   const [isDeleteMenuOpen, setIsDeleteMenuOpen] = useState(false);
   const toast = useToast();
 
+  const cloneTree = (items: MenuItem[]): MenuItem[] => JSON.parse(JSON.stringify(items));
+
   const loadMenuDetails = useCallback(async (menuId: number | string) => {
     try {
       const res = await menuService.getAdminMenu(menuId);
@@ -64,28 +67,35 @@ export default function MenuBuilderPage() {
     try {
       const res = await menuService.getAdminMenus();
       setMenus(res.data);
-      if (res.data.length > 0 && !selectedMenu) {
-        loadMenuDetails(res.data[0].id);
-      }
     } catch {
       toast.error('Failed to load navigation menus');
     }
-  }, [loadMenuDetails, selectedMenu, toast]);
+  }, [toast]);
 
   useEffect(() => {
-    fetchMenus();
-  }, [fetchMenus]);
+    menuService.getAdminMenus().then((res) => {
+      setMenus(res.data);
+      if (res.data.length > 0) {
+        loadMenuDetails(res.data[0].id);
+      }
+    }).catch(() => {
+      toast.error('Failed to load navigation menus');
+    });
+  }, [loadMenuDetails]);
 
   const handleSaveTree = async () => {
     if (!selectedMenu) return;
     setIsSaving(true);
     try {
-      await menuService.updateAdminMenu(selectedMenu.id, {
+      const res = await menuService.updateAdminMenu(selectedMenu.id, {
         name: selectedMenu.name,
         location: selectedMenu.location,
         status: selectedMenu.status,
         items: menuItems,
       });
+      setSelectedMenu(res.data);
+      setMenuItems(res.data.items || []);
+      fetchMenus();
       toast.success('Menu Tree Saved', 'Hierarchy updated and public cache invalidated.');
     } catch (err: unknown) {
       toast.error('Failed to save menu', (err as { message?: string })?.message);
@@ -120,7 +130,7 @@ export default function MenuBuilderPage() {
   const handleSaveItemForm = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItemIdx) return;
-    const updated = [...menuItems];
+    const updated = cloneTree(menuItems);
     const { parentIdx, childIdx } = editingItemIdx;
 
     if (parentIdx === null && childIdx === null) {
@@ -128,21 +138,22 @@ export default function MenuBuilderPage() {
       updated.push({ ...itemForm, children: [] });
     } else if (parentIdx !== null && childIdx === null) {
       // Add child under parent
-      const parent = updated[parentIdx];
-      if (!parent.children) parent.children = [];
-      parent.children.push({ ...itemForm });
+      if (!updated[parentIdx].children) updated[parentIdx].children = [];
+      updated[parentIdx].children!.push({ ...itemForm });
     } else if (parentIdx === null && childIdx !== null) {
       // Edit top-level item
+      const existingChildren = updated[childIdx].children || [];
       updated[childIdx] = {
-        ...updated[childIdx],
         ...itemForm,
+        children: existingChildren,
       };
     } else if (parentIdx !== null && childIdx !== null) {
       // Edit child item
-      if (updated[parentIdx].children) {
-        updated[parentIdx].children[childIdx] = {
-          ...updated[parentIdx].children[childIdx],
+      if (updated[parentIdx]?.children?.[childIdx]) {
+        const existingChildren = updated[parentIdx].children![childIdx].children || [];
+        updated[parentIdx].children![childIdx] = {
           ...itemForm,
+          children: existingChildren,
         };
       }
     }
@@ -151,47 +162,85 @@ export default function MenuBuilderPage() {
     setIsItemModalOpen(false);
   };
 
-  const moveItem = (index: number, direction: 'up' | 'down') => {
-    const updated = [...menuItems];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= updated.length) return;
+  const moveItem = (parentIdx: number | null, index: number, direction: 'up' | 'down') => {
+    const updated = cloneTree(menuItems);
+    if (parentIdx === null) {
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= updated.length) return;
 
-    const [moved] = updated.splice(index, 1);
-    updated.splice(targetIndex, 0, moved);
+      const [moved] = updated.splice(index, 1);
+      updated.splice(targetIndex, 0, moved);
+    } else if (updated[parentIdx]?.children) {
+      const children = updated[parentIdx].children!;
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= children.length) return;
+
+      const [moved] = children.splice(index, 1);
+      children.splice(targetIndex, 0, moved);
+    }
     setMenuItems(updated);
   };
 
   const toggleItemActive = (parentIdx: number | null, childIdx: number) => {
-    const updated = [...menuItems];
+    const updated = cloneTree(menuItems);
     if (parentIdx === null) {
       updated[childIdx].is_active = !updated[childIdx].is_active;
-    } else if (updated[parentIdx].children) {
-      updated[parentIdx].children[childIdx].is_active = !updated[parentIdx].children[childIdx].is_active;
+    } else if (updated[parentIdx]?.children?.[childIdx]) {
+      updated[parentIdx].children![childIdx].is_active = !updated[parentIdx].children![childIdx].is_active;
     }
     setMenuItems(updated);
   };
 
   const handleDeleteItem = (parentIdx: number | null, childIdx: number) => {
-    const updated = [...menuItems];
+    const updated = cloneTree(menuItems);
     if (parentIdx === null) {
       updated.splice(childIdx, 1);
-    } else {
-      updated[parentIdx].children?.splice(childIdx, 1);
+    } else if (updated[parentIdx]?.children) {
+      updated[parentIdx].children!.splice(childIdx, 1);
     }
     setMenuItems(updated);
   };
 
-  const handleCreateMenuSubmit = async (e: React.FormEvent) => {
+  const openCreateMenuModal = () => {
+    setEditingMenuId(null);
+    setMenuForm({ name: '', location: 'header', status: 'active' });
+    setIsMenuModalOpen(true);
+  };
+
+  const openEditMenuModal = () => {
+    if (!selectedMenu) return;
+    setEditingMenuId(selectedMenu.id);
+    setMenuForm({
+      name: selectedMenu.name,
+      location: selectedMenu.location || '',
+      status: selectedMenu.status || 'active',
+    });
+    setIsMenuModalOpen(true);
+  };
+
+  const handleMenuFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const res = await menuService.createAdminMenu(menuForm);
-      toast.success('Menu Created', `${menuForm.name} was created.`);
+      if (editingMenuId) {
+        const res = await menuService.updateAdminMenu(editingMenuId, {
+          name: menuForm.name,
+          location: menuForm.location || null,
+          status: menuForm.status,
+          items: menuItems,
+        });
+        toast.success('Menu Updated', `${menuForm.name} configuration updated.`);
+        setSelectedMenu(res.data);
+        setMenuItems(res.data.items || []);
+      } else {
+        const res = await menuService.createAdminMenu(menuForm);
+        toast.success('Menu Created', `${menuForm.name} was created.`);
+        loadMenuDetails(res.data.id);
+      }
       setIsMenuModalOpen(false);
       fetchMenus();
-      loadMenuDetails(res.data.id);
     } catch (err: unknown) {
-      toast.error('Failed to create menu', (err as { message?: string })?.message);
+      toast.error('Failed to save menu settings', (err as { message?: string })?.message);
     } finally {
       setIsSaving(false);
     }
@@ -222,7 +271,7 @@ export default function MenuBuilderPage() {
           description="Construct hierarchical navigation trees with recursive sub-items and instant cache invalidation."
           actions={
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={() => setIsMenuModalOpen(true)}>
+              <Button variant="outline" size="sm" onClick={openCreateMenuModal}>
                 <Plus className="w-4 h-4 mr-1" /> New Menu
               </Button>
               {selectedMenu && (
@@ -276,6 +325,9 @@ export default function MenuBuilderPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={openEditMenuModal} className="text-xs">
+                      <Edit2 className="w-3.5 h-3.5 mr-1" /> Edit Menu Settings
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => openAddItemModal(null)} className="text-xs">
                       <Plus className="w-3.5 h-3.5 mr-1" /> Add Top Item
                     </Button>
@@ -316,7 +368,7 @@ export default function MenuBuilderPage() {
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="flex items-center gap-0.5 text-gray-400">
                               <button
-                                onClick={() => moveItem(pIdx, 'up')}
+                                onClick={() => moveItem(null, pIdx, 'up')}
                                 disabled={pIdx === 0}
                                 className="p-0.5 hover:text-gray-700 disabled:opacity-30"
                                 title="Move Up"
@@ -324,7 +376,7 @@ export default function MenuBuilderPage() {
                                 <MoveUp className="w-3 h-3" />
                               </button>
                               <button
-                                onClick={() => moveItem(pIdx, 'down')}
+                                onClick={() => moveItem(null, pIdx, 'down')}
                                 disabled={pIdx === menuItems.length - 1}
                                 className="p-0.5 hover:text-gray-700 disabled:opacity-30"
                                 title="Move Down"
@@ -388,6 +440,24 @@ export default function MenuBuilderPage() {
                                 }`}
                               >
                                 <div className="flex items-center gap-2 min-w-0">
+                                  <div className="flex items-center gap-0.5 text-gray-400">
+                                    <button
+                                      onClick={() => moveItem(pIdx, cIdx, 'up')}
+                                      disabled={cIdx === 0}
+                                      className="p-0.5 hover:text-gray-700 disabled:opacity-30"
+                                      title="Move Sub-item Up"
+                                    >
+                                      <MoveUp className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => moveItem(pIdx, cIdx, 'down')}
+                                      disabled={cIdx === (item.children?.length ?? 0) - 1}
+                                      className="p-0.5 hover:text-gray-700 disabled:opacity-30"
+                                      title="Move Sub-item Down"
+                                    >
+                                      <MoveDown className="w-3 h-3" />
+                                    </button>
+                                  </div>
                                   <span className="text-gray-400">└</span>
                                   <span className="font-medium text-gray-800 dark:text-gray-200 truncate">{child.title}</span>
                                   <span className="font-mono text-[10px] text-gray-400 truncate">{child.url || '#'}</span>
@@ -486,14 +556,14 @@ export default function MenuBuilderPage() {
           </form>
         </Modal>
 
-        {/* Create Menu Modal */}
+        {/* Create / Edit Menu Modal */}
         <Modal
           isOpen={isMenuModalOpen}
           onClose={() => setIsMenuModalOpen(false)}
-          title="Create New Navigation Menu"
+          title={editingMenuId ? "Edit Navigation Menu Settings" : "Create New Navigation Menu"}
           description="Set menu name and assigned frontend location."
         >
-          <form onSubmit={handleCreateMenuSubmit} className="space-y-4">
+          <form onSubmit={handleMenuFormSubmit} className="space-y-4">
             <Input
               label="Menu Name"
               value={menuForm.name}
@@ -519,7 +589,7 @@ export default function MenuBuilderPage() {
                 Cancel
               </Button>
               <Button variant="primary" size="sm" type="submit" isLoading={isSaving}>
-                Create Menu
+                {editingMenuId ? "Save Settings" : "Create Menu"}
               </Button>
             </div>
           </form>

@@ -9,6 +9,8 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+use App\Services\ActivityLogger;
+
 class MediaController extends Controller
 {
     use ApiResponse;
@@ -47,13 +49,29 @@ class MediaController extends Controller
         if ($request->hasFile('files')) {
             $uploaded = [];
             foreach ($request->file('files') as $file) {
-                $uploaded[] = $this->mediaService->uploadFile($file, $userId);
+                $item = $this->mediaService->uploadFile($file, $userId);
+                $uploaded[] = $item;
+                ActivityLogger::log(
+                    action: 'uploaded',
+                    description: "Uploaded media file: {$item->name} ({$item->formatted_size})",
+                    module: 'media',
+                    subject: $item,
+                    newValues: ['name' => $item->name, 'size' => $item->size, 'mime_type' => $item->mime_type]
+                );
             }
 
             return $this->successResponse($uploaded, count($uploaded) . ' files uploaded successfully.', 201);
         }
 
         $media = $this->mediaService->uploadFile($request->file('file'), $userId);
+
+        ActivityLogger::log(
+            action: 'uploaded',
+            description: "Uploaded media file: {$media->name} ({$media->formatted_size})",
+            module: 'media',
+            subject: $media,
+            newValues: ['name' => $media->name, 'size' => $media->size, 'mime_type' => $media->mime_type]
+        );
 
         return $this->successResponse($media, 'File uploaded successfully.', 201);
     }
@@ -63,7 +81,16 @@ class MediaController extends Controller
      */
     public function destroy(Media $medium): JsonResponse
     {
+        $deletedName = $medium->name;
+        $deletedSize = $medium->size;
         $this->mediaService->deleteMedia($medium);
+
+        ActivityLogger::log(
+            action: 'deleted',
+            description: "Deleted media file: {$deletedName}",
+            module: 'media',
+            oldValues: ['name' => $deletedName, 'size' => $deletedSize]
+        );
 
         return $this->successResponse(null, 'Media file deleted successfully.');
     }

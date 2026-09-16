@@ -19,11 +19,7 @@ export const mediaService = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await apiClient.post<ApiResponse<MediaItem>>('/api/v1/admin/media', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiClient.post<ApiResponse<MediaItem>>('/api/v1/admin/media', formData);
     return response.data;
   },
 
@@ -33,11 +29,7 @@ export const mediaService = {
       formData.append('files[]', file);
     });
 
-    const response = await apiClient.post<ApiResponse<MediaItem[]>>('/api/v1/admin/media', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiClient.post<ApiResponse<MediaItem[]>>('/api/v1/admin/media', formData);
     return response.data;
   },
 

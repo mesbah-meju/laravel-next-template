@@ -19,4 +19,9 @@ export const settingService = {
     const response = await apiClient.post<ApiResponse<SiteSettings>>('/api/v1/admin/settings', { settings });
     return response.data;
   },
+
+  async sendTestEmail(email: string): Promise<ApiResponse<null>> {
+    const response = await apiClient.post<ApiResponse<null>>('/api/v1/admin/settings/test-email', { email });
+    return response.data;
+  },
 };

@@ -42,6 +42,19 @@ export async function ensureCsrfCookie(): Promise<void> {
 
 // Request interceptor to automatically fetch CSRF cookie for mutation requests
 apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+  // If sending FormData, delete Content-Type so browser sets 'multipart/form-data; boundary=...' automatically
+  if (config.data instanceof FormData) {
+    if (config.headers) {
+      if (typeof config.headers.delete === 'function') {
+        config.headers.delete('Content-Type');
+        config.headers.delete('content-type');
+      } else {
+        delete config.headers['Content-Type'];
+        delete config.headers['content-type'];
+      }
+    }
+  }
+
   const method = config.method?.toLowerCase();
 
   if (method && ['post', 'put', 'patch', 'delete'].includes(method)) {
