@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Api\V1;
 
-use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -75,9 +74,9 @@ class ActivityLogTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['id', 'action', 'module', 'description', 'created_at']
+                    '*' => ['id', 'action', 'module', 'description', 'created_at'],
                 ],
-                'pagination' => ['total', 'current_page']
+                'pagination' => ['total', 'current_page'],
             ]);
 
         $this->assertCount(1, $response->json('data'));

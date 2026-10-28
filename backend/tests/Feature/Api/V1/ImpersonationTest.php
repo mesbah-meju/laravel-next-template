@@ -4,8 +4,10 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class ImpersonationTest extends TestCase
@@ -13,14 +15,16 @@ class ImpersonationTest extends TestCase
     use RefreshDatabase;
 
     protected User $superAdmin;
+
     protected User $regularUser;
+
     protected User $secondAdmin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $adminRole = Role::create(['name' => 'Super Admin', 'guard_name' => 'web']);
         $userRole = Role::create(['name' => 'User', 'guard_name' => 'web']);
@@ -78,7 +82,7 @@ class ImpersonationTest extends TestCase
         $startRes = $this->actingAs($this->superAdmin)
             ->postJson("/api/v1/admin/impersonate/{$this->regularUser->id}");
 
-        \Laravel\Sanctum\Sanctum::actingAs($this->regularUser, ['impersonated']);
+        Sanctum::actingAs($this->regularUser, ['impersonated']);
 
         $stopRes = $this->postJson('/api/v1/admin/impersonate/stop/session');
 

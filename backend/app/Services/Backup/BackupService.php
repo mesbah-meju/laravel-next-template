@@ -30,7 +30,7 @@ class BackupService
 
         if ($driver === 'mysql') {
             // Check if mysqldump binary exists or if PHP PDO fallback is ready
-            $hasDump = !empty(shell_exec('which mysqldump 2>/dev/null')) || !empty(shell_exec('where mysqldump 2>nul'));
+            $hasDump = ! empty(shell_exec('which mysqldump 2>/dev/null')) || ! empty(shell_exec('where mysqldump 2>nul'));
             $status['has_binary'] = $hasDump;
             $status['strategy'] = $hasDump ? 'mysqldump_cli' : 'pdo_stream_export';
         } elseif ($driver === 'sqlite') {
@@ -52,7 +52,7 @@ class BackupService
         $timestamp = date('Y-m-d_H-i-s');
         $filename = "backup_{$connection}_{$timestamp}.sql";
         $directory = 'backups';
-        
+
         Storage::disk('local')->makeDirectory($directory);
         $relativeFilePath = "{$directory}/{$filename}";
         $fullPath = Storage::disk('local')->path($relativeFilePath);
@@ -71,7 +71,7 @@ class BackupService
             if ($driver === 'sqlite') {
                 $dbPath = config("database.connections.{$connection}.database");
                 if ($dbPath === ':memory:') {
-                    File::put($fullPath, "-- SQLite in-memory snapshot\n-- Generated " . date('Y-m-d H:i:s'));
+                    File::put($fullPath, "-- SQLite in-memory snapshot\n-- Generated ".date('Y-m-d H:i:s'));
                 } else {
                     File::copy($dbPath, $fullPath);
                 }
@@ -80,7 +80,7 @@ class BackupService
                 $handle = fopen($fullPath, 'w');
                 fwrite($handle, "-- NextLaravel Database Snapshot\n");
                 fwrite($handle, "-- Driver: {$driver}\n");
-                fwrite($handle, "-- Date: " . date('Y-m-d H:i:s') . "\n\n");
+                fwrite($handle, '-- Date: '.date('Y-m-d H:i:s')."\n\n");
                 fwrite($handle, "SET FOREIGN_KEY_CHECKS=0;\n\n");
 
                 $tables = DB::connection()->getDoctrineSchemaManager()->listTableNames();
@@ -91,9 +91,9 @@ class BackupService
 
                     try {
                         $createRow = DB::select("SHOW CREATE TABLE `{$table}`");
-                        if (!empty($createRow)) {
+                        if (! empty($createRow)) {
                             $createSql = ((array) $createRow[0])['Create Table'];
-                            fwrite($handle, $createSql . ";\n\n");
+                            fwrite($handle, $createSql.";\n\n");
                         }
                     } catch (Exception) {
                         // Fallback schema comment
@@ -106,13 +106,16 @@ class BackupService
                         foreach ($rows->chunk(100) as $chunk) {
                             foreach ($chunk as $row) {
                                 $rowArray = (array) $row;
-                                $columns = array_map(fn($col) => "`{$col}`", array_keys($rowArray));
+                                $columns = array_map(fn ($col) => "`{$col}`", array_keys($rowArray));
                                 $values = array_map(function ($val) {
-                                    if (is_null($val)) return 'NULL';
-                                    return "'" . addslashes((string) $val) . "'";
+                                    if (is_null($val)) {
+                                        return 'NULL';
+                                    }
+
+                                    return "'".addslashes((string) $val)."'";
                                 }, array_values($rowArray));
 
-                                fwrite($handle, "INSERT INTO `{$table}` (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $values) . ");\n");
+                                fwrite($handle, "INSERT INTO `{$table}` (".implode(', ', $columns).') VALUES ('.implode(', ', $values).");\n");
                             }
                         }
                         fwrite($handle, "\n");
@@ -132,7 +135,7 @@ class BackupService
 
             ActivityLogger::log(
                 action: 'backup_created',
-                description: "Created database backup: {$filename} (" . round($size / 1024, 2) . " KB)",
+                description: "Created database backup: {$filename} (".round($size / 1024, 2).' KB)',
                 module: 'backups',
                 newValues: ['filename' => $filename, 'size' => $size, 'driver' => $driver]
             );
@@ -165,7 +168,7 @@ class BackupService
     {
         $fullPath = Storage::disk($backup->disk)->path($backup->path);
 
-        if (!File::exists($fullPath)) {
+        if (! File::exists($fullPath)) {
             abort(404, 'Backup file not found on disk.');
         }
 

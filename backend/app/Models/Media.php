@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Media extends Model
 {
@@ -35,8 +36,9 @@ class Media extends Model
     public function getUrlAttribute(?string $value): string
     {
         if ($this->path) {
-            return \Illuminate\Support\Facades\Storage::disk($this->disk ?: 'public')->url($this->path);
+            return Storage::disk($this->disk ?: 'public')->url($this->path);
         }
+
         return $value ?: '';
     }
 
@@ -44,14 +46,15 @@ class Media extends Model
     {
         $bytes = $this->size;
         if ($bytes >= 1073741824) {
-            return number_format($bytes / 1073741824, 2) . ' GB';
+            return number_format($bytes / 1073741824, 2).' GB';
         }
         if ($bytes >= 1048576) {
-            return number_format($bytes / 1048576, 2) . ' MB';
+            return number_format($bytes / 1048576, 2).' MB';
         }
         if ($bytes >= 1024) {
-            return number_format($bytes / 1024, 2) . ' KB';
+            return number_format($bytes / 1024, 2).' KB';
         }
-        return $bytes . ' B';
+
+        return $bytes.' B';
     }
 }

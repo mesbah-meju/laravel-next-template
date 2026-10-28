@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Menu;
 use App\Models\MenuItem;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class MenuService
@@ -29,14 +28,14 @@ class MenuService
      */
     public function getMenuByLocation(string $location, int $ttl = 86400): array
     {
-        $cacheKey = 'menu_loc_' . Str::slug($location);
+        $cacheKey = 'menu_loc_'.Str::slug($location);
 
         return Cache::remember($cacheKey, $ttl, function () use ($location) {
             $menu = Menu::where('location', $location)
                 ->orWhere('name', 'like', "%{$location}%")
                 ->first();
 
-            if (!$menu) {
+            if (! $menu) {
                 return [];
             }
 
@@ -53,12 +52,12 @@ class MenuService
      */
     public function getMenuTree(string $name, int $ttl = 86400): array
     {
-        $cacheKey = 'menu_tree_' . Str::slug($name);
+        $cacheKey = 'menu_tree_'.Str::slug($name);
 
         return Cache::remember($cacheKey, $ttl, function () use ($name) {
-            $menu = Menu::where('name', 'like', '%' . $name . '%')->first() ?? Menu::first();
+            $menu = Menu::where('name', 'like', '%'.$name.'%')->first() ?? Menu::first();
 
-            if (!$menu) {
+            if (! $menu) {
                 return [];
             }
 
@@ -128,7 +127,7 @@ class MenuService
     public function saveMenuItems(Menu $menu, array $items, $parentId = null): void
     {
         foreach ($items as $idx => $item) {
-            $url = !empty($item['url']) ? $item['url'] : (!empty($item['raw_url']) ? $item['raw_url'] : '#');
+            $url = ! empty($item['url']) ? $item['url'] : (! empty($item['raw_url']) ? $item['raw_url'] : '#');
 
             $mi = MenuItem::create([
                 'menu_id' => $menu->id,
@@ -146,7 +145,7 @@ class MenuService
                 'is_active' => filter_var($item['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
             ]);
 
-            if (!empty($item['children']) && is_array($item['children'])) {
+            if (! empty($item['children']) && is_array($item['children'])) {
                 $this->saveMenuItems($menu, $item['children'], $mi->id);
             }
         }

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class BackupTest extends TestCase
@@ -15,13 +16,14 @@ class BackupTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $regularUser;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $role = Role::create(['name' => 'Super Admin']);
         Permission::create(['name' => 'view-backups']);
@@ -75,11 +77,11 @@ class BackupTest extends TestCase
         $list->assertJsonStructure([
             'success',
             'data' => [
-                '*' => ['id', 'filename', 'status', 'size_bytes']
+                '*' => ['id', 'filename', 'status', 'size_bytes'],
             ],
             'meta' => [
-                'environment'
-            ]
+                'environment',
+            ],
         ]);
     }
 

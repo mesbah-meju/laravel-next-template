@@ -44,7 +44,7 @@ class SecurityTest extends TestCase
 
     public function test_security_service_records_login_attempt(): void
     {
-        $service = new SecurityService();
+        $service = new SecurityService;
         $history = $service->recordLoginAttempt($this->adminUser, 'successful', $this->adminUser->email);
 
         $this->assertDatabaseHas('login_histories', [
@@ -75,9 +75,9 @@ class SecurityTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['id', 'email', 'device', 'platform', 'browser', 'status', 'login_at']
+                    '*' => ['id', 'email', 'device', 'platform', 'browser', 'status', 'login_at'],
                 ],
-                'pagination'
+                'pagination',
             ]);
     }
 
@@ -100,8 +100,8 @@ class SecurityTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['id', 'ip_address', 'device', 'platform', 'browser', 'last_active']
-                ]
+                    '*' => ['id', 'ip_address', 'device', 'platform', 'browser', 'last_active'],
+                ],
             ]);
     }
 
@@ -125,7 +125,7 @@ class SecurityTest extends TestCase
                 'user_agent' => 'Mozilla/5.0',
                 'payload' => 'payload2',
                 'last_activity' => time(),
-            ]
+            ],
         ]);
 
         $response = $this->postJson('/api/v1/admin/security/sessions/logout-others', [

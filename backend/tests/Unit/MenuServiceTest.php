@@ -33,7 +33,7 @@ class MenuServiceTest extends TestCase
             'is_active' => true,
         ]);
 
-        $service = new MenuService();
+        $service = new MenuService;
         $tree = $service->getMenuTree('Header Menu');
 
         $this->assertCount(1, $tree);
@@ -54,7 +54,7 @@ class MenuServiceTest extends TestCase
             'is_active' => true,
         ]);
 
-        $service = new MenuService();
+        $service = new MenuService;
         $formatted = $service->formatMenu($menu);
 
         $this->assertSame('Footer Menu', $formatted['name']);
@@ -66,7 +66,7 @@ class MenuServiceTest extends TestCase
     {
         $menu = Menu::create(['name' => 'Main Navigation']);
 
-        $service = new MenuService();
+        $service = new MenuService;
         $itemsData = [
             [
                 'title' => 'Articles',

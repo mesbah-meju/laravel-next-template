@@ -21,7 +21,7 @@ class SettingSeeder extends Seeder
             'site_email' => 'contact@example.com',
             'site_phone' => '+1 (555) 019-2834',
             'site_address' => 'San Francisco, CA, United States',
-            'footer_text' => '© ' . date('Y') . ' Laravel Next Starter. All rights reserved.',
+            'footer_text' => '© '.date('Y').' Laravel Next Starter. All rights reserved.',
             'timezone' => 'UTC',
             'default_meta_title' => 'Laravel Next Starter — Production Ready Full-Stack Template',
             'default_meta_description' => 'Build high performance, scalable web applications with Laravel 12 backend and Next.js frontend.',

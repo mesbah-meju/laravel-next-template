@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Api\V1;
 
-use App\Models\Import;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class ImportExportTest extends TestCase
@@ -21,7 +21,7 @@ class ImportExportTest extends TestCase
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $role = Role::create(['name' => 'Super Admin', 'guard_name' => 'web']);
         Permission::create(['name' => 'manage-users', 'guard_name' => 'web']);

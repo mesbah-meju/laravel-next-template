@@ -140,13 +140,13 @@ class SettingService
             return $result;
         });
 
-        if (!$maskSensitive) {
+        if (! $maskSensitive) {
             return $raw;
         }
 
         $masked = $raw;
         foreach ($this->sensitiveKeys as $key) {
-            if (!empty($masked[$key])) {
+            if (! empty($masked[$key])) {
                 $masked[$key] = '••••••••';
             }
         }

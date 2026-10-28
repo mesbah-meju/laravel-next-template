@@ -2,6 +2,8 @@
 
 namespace App\Services\ImportExport;
 
+use App\Models\User;
+
 class ImportRegistry
 {
     protected static array $definitions = [];
@@ -9,7 +11,7 @@ class ImportRegistry
     /**
      * Register an importable definition.
      *
-     * @param string $key e.g. 'users'
+     * @param  string  $key  e.g. 'users'
      * @param array{
      *     label: string,
      *     description?: string,
@@ -48,6 +50,7 @@ class ImportRegistry
     public static function all(): array
     {
         self::ensureDefaults();
+
         return self::$definitions;
     }
 
@@ -57,6 +60,7 @@ class ImportRegistry
     public static function get(string $key): ?array
     {
         self::ensureDefaults();
+
         return self::$definitions[$key] ?? null;
     }
 
@@ -65,7 +69,7 @@ class ImportRegistry
      */
     protected static function ensureDefaults(): void
     {
-        if (!isset(self::$definitions['users'])) {
+        if (! isset(self::$definitions['users'])) {
             self::register('users', [
                 'label' => 'Users',
                 'description' => 'Import user accounts with names, emails, and statuses.',
@@ -109,25 +113,32 @@ class ImportRegistry
                         'example' => 'active',
                     ],
                 ],
-                'processor' => function (array $row, string $duplicateStrategy) {
+                'processor' => function (array $row, string $duplicateStrategy, array $options = [], $actor = null) {
                     $email = trim($row['email'] ?? '');
                     $name = trim($row['name'] ?? '');
-                    $password = !empty($row['password']) ? bcrypt($row['password']) : bcrypt('Secret123!');
-                    $status = !empty($row['status']) ? strtolower($row['status']) : 'active';
+                    $password = ! empty($row['password']) ? bcrypt($row['password']) : bcrypt('Secret123!');
+                    $status = ! empty($row['status']) ? strtolower($row['status']) : 'active';
 
-                    $existing = \App\Models\User::where('email', $email)->first();
+                    $existing = User::where('email', $email)->first();
                     if ($existing) {
+                        // Prevent non-Super Admin from altering, suspending, or overwriting a Super Admin account
+                        if ($existing->hasRole('Super Admin') && (! $actor || ! $actor->hasRole('Super Admin'))) {
+                            return 'skipped';
+                        }
+
                         if ($duplicateStrategy === 'update') {
                             $existing->update([
                                 'name' => $name,
                                 'status' => $status,
                             ]);
+
                             return 'updated';
                         }
+
                         return 'skipped';
                     }
 
-                    \App\Models\User::create([
+                    User::create([
                         'name' => $name,
                         'email' => $email,
                         'password' => $password,

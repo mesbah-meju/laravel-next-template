@@ -2,12 +2,11 @@
 
 namespace App\Services\Seo;
 
-use Closure;
-
 class SitemapRegistry
 {
     /**
      * Registered sitemap providers.
+     *
      * @var array<string, callable>
      */
     protected static array $providers = [];

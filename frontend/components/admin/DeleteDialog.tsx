@@ -56,7 +56,7 @@ export function DeleteDialog({
               {message || (
                 <>
                   Are you sure you want to delete{' '}
-                  {itemName ? <span className="font-semibold text-rose-950 dark:text-rose-100 font-mono">"{itemName}"</span> : 'this record'}?{' '}
+                  {itemName ? <span className="font-semibold text-rose-950 dark:text-rose-100 font-mono">&ldquo;{itemName}&rdquo;</span> : 'this record'}?{' '}
                   All associated dependencies will be permanently purged.
                 </>
               )}

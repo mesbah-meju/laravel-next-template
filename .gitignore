@@ -26,6 +26,9 @@ out/
 */storage/framework/testing/*
 */storage/framework/views/*
 */storage/logs/*.log
+*/storage/app/*.lock
+*/storage/app/installer_setup_token*
+*/storage/app/imports/*
 */public/hot
 */public/storage
 

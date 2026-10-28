@@ -39,7 +39,7 @@ export const importExportService = {
       .then((res) => res.data);
   },
 
-  processImport(uuid: string, columnMapping: Record<string, string>, options?: Record<string, any>) {
+  processImport(uuid: string, columnMapping: Record<string, string>, options?: Record<string, unknown>) {
     return apiClient
       .post<ApiResponse<ImportRecord>>(`/api/v1/admin/import-export/${uuid}/process`, {
         column_mapping: columnMapping,

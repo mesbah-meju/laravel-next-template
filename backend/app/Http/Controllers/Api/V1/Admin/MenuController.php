@@ -27,7 +27,7 @@ class MenuController extends Controller
         $query = Menu::query()->withCount('allItems');
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->input('search') . '%');
+            $query->where('name', 'like', '%'.$request->input('search').'%');
         }
 
         $menus = $query->latest()->get();
@@ -56,7 +56,7 @@ class MenuController extends Controller
 
             MenuItem::where('menu_id', $menu->id)->delete();
 
-            if (!empty($validated['items'])) {
+            if (! empty($validated['items'])) {
                 $this->menuService->saveMenuItems($menu, $validated['items']);
             }
 
@@ -75,6 +75,7 @@ class MenuController extends Controller
     public function show(Menu $menu): JsonResponse
     {
         $menu->unsetRelation('allItems');
+
         return $this->successResponse($this->menuService->formatMenu($menu), 'Menu details retrieved successfully.');
     }
 
@@ -100,7 +101,7 @@ class MenuController extends Controller
             // Reliably delete all existing items for this menu
             MenuItem::where('menu_id', $menu->id)->delete();
 
-            if (!empty($validated['items'])) {
+            if (! empty($validated['items'])) {
                 $this->menuService->saveMenuItems($menu, $validated['items']);
             }
         });

@@ -48,6 +48,7 @@ export function Combobox({
   className,
   emptyText = 'No matching options found.',
 }: ComboboxProps) {
+  const comboboxId = React.useId();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -137,6 +138,7 @@ export function Combobox({
           <div
             role="combobox"
             aria-expanded={isOpen}
+            aria-controls={`${comboboxId}-listbox`}
             aria-invalid={Boolean(errorMessage)}
             tabIndex={disabled ? -1 : 0}
             onKeyDown={handleKeyDown}
@@ -200,7 +202,7 @@ export function Combobox({
             </div>
 
             {/* Options List */}
-            <div className="max-h-60 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
+            <div id={`${comboboxId}-listbox`} role="listbox" className="max-h-60 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
               {filteredOptions.length === 0 ? (
                 <div className="py-6 text-center text-xs text-gray-400">
                   {emptyText}

@@ -5,7 +5,6 @@ namespace App\Services\ImportExport;
 use Exception;
 use Generator;
 use ZipArchive;
-use SimpleXMLElement;
 
 class FileParser
 {
@@ -57,6 +56,7 @@ class FileParser
         foreach (self::readRows($filePath, $format) as $_) {
             $count++;
         }
+
         return $count;
     }
 
@@ -69,6 +69,7 @@ class FileParser
     {
         if (strtolower($format) === 'xlsx') {
             yield from self::readXlsxRows($filePath);
+
             return;
         }
 
@@ -80,12 +81,12 @@ class FileParser
      */
     protected static function readCsvHeaders(string $filePath): array
     {
-        if (!file_exists($filePath) || !is_readable($filePath)) {
+        if (! file_exists($filePath) || ! is_readable($filePath)) {
             throw new Exception("File not found or unreadable at {$filePath}");
         }
 
         $handle = fopen($filePath, 'r');
-        if (!$handle) {
+        if (! $handle) {
             throw new Exception("Failed to open file {$filePath}");
         }
 
@@ -98,7 +99,7 @@ class FileParser
         $headers = fgetcsv($handle);
         fclose($handle);
 
-        if (!$headers || !is_array($headers)) {
+        if (! $headers || ! is_array($headers)) {
             return [];
         }
 
@@ -111,7 +112,7 @@ class FileParser
     protected static function readCsvRows(string $filePath): Generator
     {
         $handle = fopen($filePath, 'r');
-        if (!$handle) {
+        if (! $handle) {
             return;
         }
 
@@ -122,8 +123,9 @@ class FileParser
         }
 
         $headers = fgetcsv($handle);
-        if (!$headers || !is_array($headers)) {
+        if (! $headers || ! is_array($headers)) {
             fclose($handle);
+
             return;
         }
 
@@ -131,13 +133,13 @@ class FileParser
 
         $rowIndex = 0;
         while (($row = fgetcsv($handle)) !== false) {
-            if (empty(array_filter($row, fn($v) => trim((string)$v) !== ''))) {
+            if (empty(array_filter($row, fn ($v) => trim((string) $v) !== ''))) {
                 continue; // Skip empty rows
             }
 
             $assoc = [];
             foreach ($cleanHeaders as $index => $header) {
-                $assoc[$header] = isset($row[$index]) ? trim((string)$row[$index]) : '';
+                $assoc[$header] = isset($row[$index]) ? trim((string) $row[$index]) : '';
             }
 
             yield $rowIndex => $assoc;
@@ -153,7 +155,8 @@ class FileParser
     protected static function readXlsxHeaders(string $filePath): array
     {
         $rows = self::readXlsxXmlRows($filePath, 1);
-        return !empty($rows) ? array_values(array_filter(array_map('trim', $rows[0]))) : [];
+
+        return ! empty($rows) ? array_values(array_filter(array_map('trim', $rows[0]))) : [];
     }
 
     /**
@@ -162,7 +165,7 @@ class FileParser
     protected static function readXlsxRows(string $filePath): Generator
     {
         $sharedStrings = self::getXlsxSharedStrings($filePath);
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($filePath) !== true) {
             return;
         }
@@ -170,12 +173,12 @@ class FileParser
         $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
         $zip->close();
 
-        if (!$sheetXml) {
+        if (! $sheetXml) {
             return;
         }
 
-        $xml = simplexml_load_string($sheetXml);
-        if (!$xml || !isset($xml->sheetData->row)) {
+        $xml = simplexml_load_string($sheetXml, 'SimpleXMLElement', LIBXML_NONET);
+        if (! $xml || ! isset($xml->sheetData->row)) {
             return;
         }
 
@@ -199,10 +202,11 @@ class FileParser
             if ($isFirst) {
                 $headers = $rowValues;
                 $isFirst = false;
+
                 continue;
             }
 
-            if (empty(array_filter($rowValues, fn($v) => $v !== ''))) {
+            if (empty(array_filter($rowValues, fn ($v) => $v !== ''))) {
                 continue;
             }
 
@@ -222,11 +226,11 @@ class FileParser
     protected static function getXlsxSharedStrings(string $filePath): array
     {
         $strings = [];
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($filePath) === true) {
             $xmlString = $zip->getFromName('xl/sharedStrings.xml');
             if ($xmlString) {
-                $xml = simplexml_load_string($xmlString);
+                $xml = simplexml_load_string($xmlString, 'SimpleXMLElement', LIBXML_NONET);
                 if ($xml && isset($xml->si)) {
                     foreach ($xml->si as $si) {
                         $strings[] = (string) ($si->t ?? $si->r->t ?? '');
@@ -245,7 +249,7 @@ class FileParser
     protected static function readXlsxXmlRows(string $filePath, int $maxRows = 1): array
     {
         $sharedStrings = self::getXlsxSharedStrings($filePath);
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($filePath) !== true) {
             return [];
         }
@@ -253,12 +257,12 @@ class FileParser
         $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
         $zip->close();
 
-        if (!$sheetXml) {
+        if (! $sheetXml) {
             return [];
         }
 
-        $xml = simplexml_load_string($sheetXml);
-        if (!$xml || !isset($xml->sheetData->row)) {
+        $xml = simplexml_load_string($sheetXml, 'SimpleXMLElement', LIBXML_NONET);
+        if (! $xml || ! isset($xml->sheetData->row)) {
             return [];
         }
 

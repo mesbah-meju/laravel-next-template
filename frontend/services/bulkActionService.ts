@@ -9,7 +9,7 @@ export const bulkActionService = {
       .then((res) => res.data);
   },
 
-  execute(resource: string, action: string, ids: (string | number)[], payload?: Record<string, any>) {
+  execute(resource: string, action: string, ids: (string | number)[], payload?: Record<string, unknown>) {
     return apiClient
       .post<ApiResponse<BulkActionResult>>(`/api/v1/admin/bulk-actions/${resource}`, {
         action,

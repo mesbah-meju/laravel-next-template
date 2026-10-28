@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class SystemNoticeTest extends TestCase
@@ -19,7 +20,7 @@ class SystemNoticeTest extends TestCase
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $role = Role::create(['name' => 'Super Admin', 'guard_name' => 'web']);
         Permission::create(['name' => 'view-system-notices', 'guard_name' => 'web']);

@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class CacheManagementTest extends TestCase
@@ -13,13 +14,14 @@ class CacheManagementTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $regularUser;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $role = Role::create(['name' => 'Super Admin']);
         Permission::create(['name' => 'manage-cache']);
@@ -56,9 +58,9 @@ class CacheManagementTest extends TestCase
             'data' => [
                 'driver',
                 'actions' => [
-                    '*' => ['key', 'label', 'description', 'danger', 'command']
-                ]
-            ]
+                    '*' => ['key', 'label', 'description', 'danger', 'command'],
+                ],
+            ],
         ]);
     }
 
@@ -66,7 +68,7 @@ class CacheManagementTest extends TestCase
     {
         $response = $this->actingAs($this->admin, 'sanctum')
             ->postJson('/api/v1/admin/system/cache/clear', [
-                'action' => 'application'
+                'action' => 'application',
             ]);
 
         $response->assertStatus(200);
@@ -77,7 +79,7 @@ class CacheManagementTest extends TestCase
     {
         $response = $this->actingAs($this->admin, 'sanctum')
             ->postJson('/api/v1/admin/system/cache/clear', [
-                'action' => 'malicious_custom_command'
+                'action' => 'malicious_custom_command',
             ]);
 
         $response->assertStatus(422);

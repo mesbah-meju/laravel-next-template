@@ -25,6 +25,7 @@ class EmailTemplateController extends Controller
         TemplateRegistry::seedDefaults();
 
         $templates = EmailTemplate::latest()->paginate($request->input('per_page', 15));
+
         return $this->paginatedResponse($templates, 'Email templates retrieved.');
     }
 
@@ -120,7 +121,7 @@ class EmailTemplateController extends Controller
         $sampleData = TemplateParser::generateSampleData($vars);
         $sampleData['user_email'] = $recipientEmail;
 
-        $renderedSubject = '[TEST] ' . TemplateParser::render($emailTemplate->subject, $sampleData, $vars);
+        $renderedSubject = '[TEST] '.TemplateParser::render($emailTemplate->subject, $sampleData, $vars);
         $renderedHtml = TemplateParser::render($emailTemplate->html_content, $sampleData, $vars);
 
         try {

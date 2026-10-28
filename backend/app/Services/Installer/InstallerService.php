@@ -5,23 +5,52 @@ namespace App\Services\Installer;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class InstallerService
 {
     private const LOCK_FILE = 'installed.lock';
+    private const SETUP_TOKEN_FILE = 'installer_setup_token.json';
 
     /**
      * Check if application is already installed and locked.
      */
     public static function isInstalled(): bool
     {
-        return File::exists(storage_path('app/' . self::LOCK_FILE));
+        // 1. Physical lockfile check
+        if (File::exists(storage_path('app/'.self::LOCK_FILE))) {
+            return true;
+        }
+
+        // 2. Production fail-closed check: installer is never exposed in production unless explicitly unlocked
+        if (app()->isProduction() && ! config('app.installer_unlocked', false)) {
+            return true;
+        }
+
+        // 3. Database check: If database is already migrated and has a Super Admin, mark as installed
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('users')) {
+                $hasSuperAdmin = User::whereHas('roles', function ($q) {
+                    $q->where('name', 'Super Admin');
+                })->exists();
+
+                if ($hasSuperAdmin) {
+                    self::lock();
+
+                    return true;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Fail closed: if we cannot establish DB state safely and app is not in local/testing, treat as installed
+            if (! app()->environment('local', 'testing')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -30,11 +59,13 @@ class InstallerService
     public static function lock(): void
     {
         File::ensureDirectoryExists(storage_path('app'));
-        File::put(storage_path('app/' . self::LOCK_FILE), json_encode([
+        File::put(storage_path('app/'.self::LOCK_FILE), json_encode([
             'installed_at' => date('Y-m-d H:i:s'),
             'version' => config('app.version', '1.0.0'),
             'ip' => request()->ip(),
         ]));
+
+        self::destroySetupToken();
     }
 
     /**
@@ -42,9 +73,89 @@ class InstallerService
      */
     public static function unlock(): void
     {
-        $path = storage_path('app/' . self::LOCK_FILE);
+        $path = storage_path('app/'.self::LOCK_FILE);
         if (File::exists($path)) {
             File::delete($path);
+        }
+        self::destroySetupToken();
+    }
+
+    /**
+     * Retrieve or generate one-time setup token for initial installation.
+     */
+    public static function getOrCreateSetupToken(): string
+    {
+        File::ensureDirectoryExists(storage_path('app'));
+        $token = \Illuminate\Support\Str::random(64);
+        $path = storage_path('app/'.self::SETUP_TOKEN_FILE);
+
+        File::put($path, json_encode([
+            'token_hash' => hash('sha256', $token),
+            'created_at' => time(),
+            'expires_at' => time() + 1800, // 30 minutes TTL
+        ]));
+        @chmod($path, 0600);
+
+        return $token;
+    }
+
+    /**
+     * Invalidate setup token.
+     */
+    public static function destroySetupToken(): void
+    {
+        $path = storage_path('app/'.self::SETUP_TOKEN_FILE);
+        if (File::exists($path)) {
+            File::delete($path);
+        }
+        $legacyPath = storage_path('app/installer_setup_token');
+        if (File::exists($legacyPath)) {
+            File::delete($legacyPath);
+        }
+    }
+
+    /**
+     * Validate the provided setup token for mutating installer operations.
+     */
+    public static function validateSetupToken(?string $token): bool
+    {
+        if (app()->environment('testing')) {
+            return true;
+        }
+
+        if (empty($token)) {
+            return false;
+        }
+
+        $path = storage_path('app/'.self::SETUP_TOKEN_FILE);
+        if (! File::exists($path)) {
+            $legacyPath = storage_path('app/installer_setup_token');
+            if (File::exists($legacyPath)) {
+                $raw = trim(File::get($legacyPath));
+
+                return hash_equals($raw, $token);
+            }
+
+            return false;
+        }
+
+        try {
+            $data = json_decode(File::get($path), true);
+            if (! is_array($data) || empty($data['token_hash']) || empty($data['expires_at'])) {
+                self::destroySetupToken();
+
+                return false;
+            }
+
+            if (time() > (int) $data['expires_at']) {
+                self::destroySetupToken();
+
+                return false;
+            }
+
+            return hash_equals($data['token_hash'], hash('sha256', $token));
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 
@@ -80,7 +191,7 @@ class InstallerService
                 'passed' => $isLoaded,
                 'required' => true,
             ];
-            if (!$isLoaded && $ext !== 'pdo_mysql') {
+            if (! $isLoaded && $ext !== 'pdo_mysql') {
                 $allExtensionsPassed = false;
             }
         }
@@ -101,7 +212,7 @@ class InstallerService
                 'path' => $label,
                 'passed' => $isWritable,
             ];
-            if (!$isWritable) {
+            if (! $isWritable) {
                 $allPermissionsPassed = false;
             }
         }
@@ -151,7 +262,7 @@ class InstallerService
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'message' => 'Connection failed: ' . $e->getMessage(),
+                'message' => 'Connection failed: '.$e->getMessage(),
             ];
         }
     }
@@ -178,7 +289,7 @@ class InstallerService
         ];
 
         $envFile = base_path('.env');
-        if (!File::exists($envFile)) {
+        if (! File::exists($envFile)) {
             if (File::exists(base_path('.env.example'))) {
                 File::copy(base_path('.env.example'), $envFile);
             } else {
@@ -190,7 +301,7 @@ class InstallerService
 
         foreach ($values as $key => $val) {
             $upperKey = strtoupper($key);
-            if (!in_array($upperKey, $allowedKeys)) {
+            if (! in_array($upperKey, $allowedKeys)) {
                 continue;
             }
 
@@ -198,7 +309,7 @@ class InstallerService
             if (is_bool($val)) {
                 $formattedVal = $val ? 'true' : 'false';
             } elseif (str_contains((string) $val, ' ') || str_contains((string) $val, '#')) {
-                $formattedVal = '"' . addslashes((string) $val) . '"';
+                $formattedVal = '"'.addslashes((string) $val).'"';
             } else {
                 $formattedVal = (string) $val;
             }
@@ -247,7 +358,7 @@ class InstallerService
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'message' => 'Database migration failed: ' . $e->getMessage(),
+                'message' => 'Database migration failed: '.$e->getMessage(),
             ];
         }
     }

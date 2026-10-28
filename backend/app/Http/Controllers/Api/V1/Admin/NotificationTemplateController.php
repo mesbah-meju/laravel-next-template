@@ -24,6 +24,7 @@ class NotificationTemplateController extends Controller
         TemplateRegistry::seedDefaults();
 
         $templates = NotificationTemplate::latest()->paginate($request->input('per_page', 15));
+
         return $this->paginatedResponse($templates, 'Notification templates retrieved.');
     }
 
@@ -114,7 +115,7 @@ class NotificationTemplateController extends Controller
         $sampleData['user_name'] = $user->name;
         $sampleData['user_email'] = $user->email;
 
-        $renderedTitle = '[TEST] ' . TemplateParser::render($notificationTemplate->title, $sampleData, $vars);
+        $renderedTitle = '[TEST] '.TemplateParser::render($notificationTemplate->title, $sampleData, $vars);
         $renderedMessage = TemplateParser::render($notificationTemplate->message, $sampleData, $vars);
 
         $user->notify(new SystemAlertNotification(

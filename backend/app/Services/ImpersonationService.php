@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -19,7 +20,7 @@ class ImpersonationService
         }
 
         // Only super admin or user with impersonate permission
-        if (!$admin->hasRole('Super Admin') && !$admin->can('impersonate-users')) {
+        if (! $admin->hasRole('Super Admin') && ! $admin->can('impersonate-users')) {
             throw new Exception('Unauthorized to impersonate users.');
         }
 
@@ -45,6 +46,10 @@ class ImpersonationService
 
         Cache::put("impersonation_token_{$tokenId}", $sessionData, now()->addHours(8));
         Cache::put("impersonation_target_{$target->id}", $sessionData, now()->addHours(8));
+
+        if (request()->hasSession()) {
+            request()->session()->put('impersonated_by', $admin->id);
+        }
 
         ActivityLogger::log(
             action: 'impersonation_started',
@@ -73,33 +78,37 @@ class ImpersonationService
      */
     public function stop(User $impersonatedUser, mixed $currentToken = null): array
     {
-        $tokenId = (is_object($currentToken) && isset($currentToken->id)) ? $currentToken->id : null;
-        $cachedInfo = $tokenId ? Cache::get("impersonation_token_{$tokenId}") : null;
+        $adminId = null;
+        $isTokenImpersonation = false;
+        $isSessionImpersonation = false;
 
-        if (!$cachedInfo) {
-            $cachedInfo = Cache::get("impersonation_target_{$impersonatedUser->id}");
+        // 1. Check Session-based impersonation
+        if (request()->hasSession() && request()->session()->has('impersonated_by')) {
+            $adminId = request()->session()->pull('impersonated_by');
+            $isSessionImpersonation = true;
         }
 
-        $adminId = $cachedInfo['admin_id'] ?? null;
+        // 2. Check Token-based impersonation
+        if (! $adminId) {
+            $tokenId = (is_object($currentToken) && isset($currentToken->id)) ? $currentToken->id : null;
+            $cachedInfo = $tokenId ? Cache::get("impersonation_token_{$tokenId}") : null;
 
-        if (!$adminId && is_object($currentToken) && isset($currentToken->name)) {
-            if (preg_match('/^impersonation_by_(\d+)$/', (string) $currentToken->name, $matches)) {
+            if ($cachedInfo && isset($cachedInfo['admin_id'])) {
+                $adminId = (int) $cachedInfo['admin_id'];
+                $isTokenImpersonation = true;
+            } elseif (is_object($currentToken) && isset($currentToken->name) && preg_match('/^impersonation_by_(\d+)$/', (string) $currentToken->name, $matches)) {
                 $adminId = (int) $matches[1];
+                $isTokenImpersonation = true;
+            } elseif (is_object($currentToken) && method_exists($currentToken, 'can') && $currentToken->can('impersonated')) {
+                $targetCache = Cache::get("impersonation_target_{$impersonatedUser->id}");
+                if ($targetCache && isset($targetCache['admin_id'])) {
+                    $adminId = (int) $targetCache['admin_id'];
+                    $isTokenImpersonation = true;
+                }
             }
         }
 
-        if (!$adminId) {
-            $latestImpersonateToken = $impersonatedUser->tokens()
-                ->where('name', 'like', 'impersonation_by_%')
-                ->latest()
-                ->first();
-            if ($latestImpersonateToken && preg_match('/^impersonation_by_(\d+)$/', (string) $latestImpersonateToken->name, $matches)) {
-                $adminId = (int) $matches[1];
-                $latestImpersonateToken->delete();
-            }
-        }
-
-        if (!$adminId) {
+        if (! $adminId || (! $isTokenImpersonation && ! $isSessionImpersonation)) {
             throw new Exception('Not currently in an active impersonation session.');
         }
 
@@ -112,8 +121,16 @@ class ImpersonationService
         }
         Cache::forget("impersonation_target_{$impersonatedUser->id}");
 
-        // Create fresh token for admin
-        $adminToken = $admin->createToken('admin_restored')->plainTextToken;
+        if ($isSessionImpersonation) {
+            Auth::login($admin);
+            request()->session()->regenerate();
+        }
+
+        // Create fresh token for admin only if token-based impersonation
+        $adminToken = null;
+        if ($isTokenImpersonation) {
+            $adminToken = $admin->createToken('admin_restored')->plainTextToken;
+        }
 
         ActivityLogger::log(
             action: 'impersonation_stopped',
@@ -126,10 +143,14 @@ class ImpersonationService
             ]
         );
 
-        return [
-            'token' => $adminToken,
+        $result = [
             'user' => $admin->load('roles', 'permissions'),
         ];
+        if ($adminToken) {
+            $result['token'] = $adminToken;
+        }
+
+        return $result;
     }
 
     /**
@@ -137,11 +158,30 @@ class ImpersonationService
      */
     public function getStatus(User $user, mixed $currentToken = null): ?array
     {
-        if (is_object($currentToken) && isset($currentToken->id)) {
-            $status = Cache::get("impersonation_token_{$currentToken->id}");
-            if ($status) return $status;
+        if (request()->hasSession() && request()->session()->has('impersonated_by')) {
+            $adminId = request()->session()->get('impersonated_by');
+            $admin = User::find($adminId);
+
+            return [
+                'admin_id' => $adminId,
+                'admin_name' => $admin?->name,
+                'admin_email' => $admin?->email,
+                'target_id' => $user->id,
+                'started_at' => now()->toIso8601String(),
+            ];
         }
 
-        return Cache::get("impersonation_target_{$user->id}");
+        if (is_object($currentToken) && isset($currentToken->id)) {
+            $status = Cache::get("impersonation_token_{$currentToken->id}");
+            if ($status) {
+                return $status;
+            }
+        }
+
+        if (is_object($currentToken) && method_exists($currentToken, 'can') && $currentToken->can('impersonated')) {
+            return Cache::get("impersonation_target_{$user->id}");
+        }
+
+        return null;
     }
 }

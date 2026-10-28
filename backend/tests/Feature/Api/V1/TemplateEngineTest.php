@@ -6,8 +6,12 @@ use App\Models\EmailTemplate;
 use App\Models\NotificationTemplate;
 use App\Models\User;
 use App\Services\Templates\TemplateParser;
+use App\Services\Templates\TemplateRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class TemplateEngineTest extends TestCase
@@ -20,13 +24,13 @@ class TemplateEngineTest extends TestCase
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        \Spatie\Permission\Models\Role::create(['name' => 'Super Admin', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::create(['name' => 'view-email-templates', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::create(['name' => 'manage-email-templates', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::create(['name' => 'view-notification-templates', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::create(['name' => 'manage-notification-templates', 'guard_name' => 'web']);
+        Role::create(['name' => 'Super Admin', 'guard_name' => 'web']);
+        Permission::create(['name' => 'view-email-templates', 'guard_name' => 'web']);
+        Permission::create(['name' => 'manage-email-templates', 'guard_name' => 'web']);
+        Permission::create(['name' => 'view-notification-templates', 'guard_name' => 'web']);
+        Permission::create(['name' => 'manage-notification-templates', 'guard_name' => 'web']);
 
         $this->admin = User::factory()->create([
             'email' => 'admin@example.com',
@@ -39,12 +43,12 @@ class TemplateEngineTest extends TestCase
             'manage-notification-templates',
         ]);
 
-        \App\Services\Templates\TemplateRegistry::seedDefaults();
+        TemplateRegistry::seedDefaults();
     }
 
     public function test_template_parser_safely_replaces_whitelist_variables(): void
     {
-        $template = "Hello {{user_name}}, welcome to {{app_name}}! Here is your link: {{action_url}}";
+        $template = 'Hello {{user_name}}, welcome to {{app_name}}! Here is your link: {{action_url}}';
         $data = [
             'user_name' => 'Alice Doe',
             'app_name' => 'NextLaravel Starter',
@@ -54,12 +58,12 @@ class TemplateEngineTest extends TestCase
         $allowed = ['user_name', 'app_name', 'action_url'];
 
         $result = TemplateParser::render($template, $data, $allowed);
-        $this->assertEquals("Hello Alice Doe, welcome to NextLaravel Starter! Here is your link: https://example.com/verify", $result);
+        $this->assertEquals('Hello Alice Doe, welcome to NextLaravel Starter! Here is your link: https://example.com/verify', $result);
     }
 
     public function test_template_parser_ignores_unwhitelisted_variables(): void
     {
-        $template = "Hello {{user_name}}, your secret is {{forbidden_token}}";
+        $template = 'Hello {{user_name}}, your secret is {{forbidden_token}}';
         $data = [
             'user_name' => 'Alice',
             'forbidden_token' => 'super_secret',
@@ -67,7 +71,7 @@ class TemplateEngineTest extends TestCase
         $allowed = ['user_name']; // forbidden_token not whitelisted
 
         $result = TemplateParser::render($template, $data, $allowed);
-        $this->assertEquals("Hello Alice, your secret is {{forbidden_token}}", $result);
+        $this->assertEquals('Hello Alice, your secret is {{forbidden_token}}', $result);
     }
 
     public function test_admin_can_list_and_preview_email_templates(): void
@@ -90,7 +94,7 @@ class TemplateEngineTest extends TestCase
             'data' => [
                 'rendered_subject',
                 'rendered_html',
-            ]
+            ],
         ]);
     }
 
@@ -102,7 +106,7 @@ class TemplateEngineTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'sanctum')
             ->postJson("/api/v1/admin/email-templates/{$template->id}/test", [
-                'email' => 'testrecipient@example.com'
+                'email' => 'testrecipient@example.com',
             ]);
 
         $response->assertStatus(200);
@@ -128,7 +132,7 @@ class TemplateEngineTest extends TestCase
             'data' => [
                 'rendered_title',
                 'rendered_message',
-            ]
+            ],
         ]);
 
         $test = $this->actingAs($this->admin, 'sanctum')

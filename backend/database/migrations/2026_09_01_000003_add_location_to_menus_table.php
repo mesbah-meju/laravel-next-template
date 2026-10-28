@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('menus', function (Blueprint $table) {
-            if (!Schema::hasColumn('menus', 'location')) {
+            if (! Schema::hasColumn('menus', 'location')) {
                 $table->string('location')->nullable()->after('name');
             }
-            if (!Schema::hasColumn('menus', 'status')) {
+            if (! Schema::hasColumn('menus', 'status')) {
                 $table->string('status')->default('active')->after('location');
             }
         });

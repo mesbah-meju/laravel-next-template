@@ -49,6 +49,7 @@ class LogViewerController extends Controller
         $this->authorizePermission('view-error-logs');
 
         $filename = $request->input('file');
+
         return LogViewerService::downloadLogFile($filename);
     }
 

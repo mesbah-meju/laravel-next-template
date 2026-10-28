@@ -23,4 +23,4 @@ Route::get('/admin-dashboard', function () {
     return response()->json(['message' => 'Admin Dashboard']);
 })->name('admin.dashboard');
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

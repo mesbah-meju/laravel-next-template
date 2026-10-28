@@ -7,9 +7,9 @@ class TemplateParser
     /**
      * Safely render a template string by substituting whitelisted tokens.
      *
-     * @param string $template Text containing tokens like {{user_name}}
-     * @param array<string, mixed> $data Key-value data to inject
-     * @param array<string>|null $allowedVariables Whitelisted variable names
+     * @param  string  $template  Text containing tokens like {{user_name}}
+     * @param  array<string, mixed>  $data  Key-value data to inject
+     * @param  array<string>|null  $allowedVariables  Whitelisted variable names
      */
     public static function render(string $template, array $data, ?array $allowedVariables = null): string
     {
@@ -17,7 +17,7 @@ class TemplateParser
             $key = $matches[1];
 
             // If an explicit whitelist is provided, reject unlisted tokens
-            if ($allowedVariables !== null && !in_array($key, $allowedVariables)) {
+            if ($allowedVariables !== null && ! in_array($key, $allowedVariables)) {
                 return $matches[0]; // Leave token unmodified
             }
 
@@ -35,7 +35,7 @@ class TemplateParser
     /**
      * Generate mock data for template preview based on variable list.
      *
-     * @param array<string> $variables
+     * @param  array<string>  $variables
      * @return array<string, string>
      */
     public static function generateSampleData(array $variables): array
@@ -46,9 +46,9 @@ class TemplateParser
             'email' => 'jane@example.com',
             'app_name' => config('app.name', 'Starter App'),
             'app_url' => config('app.url', 'http://localhost:3000'),
-            'action_url' => config('app.url', 'http://localhost:3000') . '/verify-email?token=sample_token',
-            'reset_url' => config('app.url', 'http://localhost:3000') . '/reset-password?token=sample_token',
-            'login_url' => config('app.url', 'http://localhost:3000') . '/admin-login',
+            'action_url' => config('app.url', 'http://localhost:3000').'/verify-email?token=sample_token',
+            'reset_url' => config('app.url', 'http://localhost:3000').'/reset-password?token=sample_token',
+            'login_url' => config('app.url', 'http://localhost:3000').'/admin-login',
             'role_name' => 'Editor',
             'ip_address' => '192.168.1.1',
             'browser' => 'Chrome on macOS',

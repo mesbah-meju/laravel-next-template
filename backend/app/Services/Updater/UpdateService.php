@@ -7,6 +7,7 @@ use App\Services\ActivityLogger;
 use App\Services\Backup\BackupService;
 use Exception;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 class UpdateService
@@ -19,7 +20,7 @@ class UpdateService
         $versionFile = base_path('version.json');
         if (File::exists($versionFile)) {
             $json = json_decode(File::get($versionFile), true);
-            if (!empty($json['version'])) {
+            if (! empty($json['version'])) {
                 return $json['version'];
             }
         }
@@ -71,7 +72,7 @@ class UpdateService
         $requiredExtensions = ['pdo', 'mbstring', 'openssl', 'tokenizer', 'xml', 'curl'];
         $extOk = true;
         foreach ($requiredExtensions as $ext) {
-            if (!extension_loaded($ext)) {
+            if (! extension_loaded($ext)) {
                 $extOk = false;
                 break;
             }
@@ -80,7 +81,7 @@ class UpdateService
         $storageWritable = File::isWritable(storage_path()) && File::isWritable(base_path('bootstrap/cache'));
         $dbConnected = true;
         try {
-            \Illuminate\Support\Facades\DB::connection()->getPdo();
+            DB::connection()->getPdo();
         } catch (\Throwable) {
             $dbConnected = false;
         }
@@ -134,13 +135,13 @@ class UpdateService
             'status' => 'checking',
             'started_by' => $userId,
             'started_at' => now(),
-            'release_notes' => 'Applied approved update package to ' . $targetVersion,
+            'release_notes' => 'Applied approved update package to '.$targetVersion,
         ]);
 
         try {
             // 1. Run Preflight
             $preflight = self::runPreflightCheck($targetVersion);
-            if (!$preflight['ready']) {
+            if (! $preflight['ready']) {
                 throw new Exception('Preflight check failed. Update blocked for security.');
             }
 

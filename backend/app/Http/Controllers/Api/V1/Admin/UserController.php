@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
-
-use App\Services\ActivityLogger;
 
 class UserController extends Controller
 {
@@ -27,7 +26,7 @@ class UserController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -62,6 +61,10 @@ class UserController extends Controller
             'roles.*' => 'string|exists:roles,name',
         ]);
 
+        if (! empty($validated['roles']) && in_array('Super Admin', $validated['roles']) && ! $request->user()?->hasRole('Super Admin')) {
+            return $this->errorResponse('Only Super Admins can assign the Super Admin role.', null, 403);
+        }
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -71,7 +74,7 @@ class UserController extends Controller
             'email_verified_at' => now(),
         ]);
 
-        if (!empty($validated['roles'])) {
+        if (! empty($validated['roles'])) {
             $user->syncRoles($validated['roles']);
         }
 
@@ -108,15 +111,23 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user): JsonResponse
     {
+        if ($user->hasRole('Super Admin') && ! $request->user()?->hasRole('Super Admin')) {
+            return $this->errorResponse('Only Super Admins can manage Super Admin accounts.', null, 403);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'required|email|max:255|unique:users,email,'.$user->id,
             'password' => ['nullable', 'string', Password::defaults()],
             'status' => 'required|in:active,inactive,suspended',
             'avatar' => 'nullable|string|max:2048',
             'roles' => 'nullable|array',
             'roles.*' => 'string|exists:roles,name',
         ]);
+
+        if (isset($validated['roles']) && in_array('Super Admin', $validated['roles']) && ! $request->user()?->hasRole('Super Admin')) {
+            return $this->errorResponse('Only Super Admins can assign the Super Admin role.', null, 403);
+        }
 
         $oldValues = [
             'name' => $user->name,
@@ -132,7 +143,7 @@ class UserController extends Controller
             'avatar' => $validated['avatar'] ?? $user->avatar,
         ];
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $updateData['password'] = Hash::make($validated['password']);
         }
 
@@ -166,6 +177,10 @@ class UserController extends Controller
      */
     public function toggleStatus(Request $request, User $user): JsonResponse
     {
+        if ($user->hasRole('Super Admin') && ! $request->user()?->hasRole('Super Admin')) {
+            return $this->errorResponse('Only Super Admins can alter status of Super Admin accounts.', null, 403);
+        }
+
         $request->validate([
             'status' => 'required|in:active,inactive,suspended',
         ]);
@@ -194,6 +209,10 @@ class UserController extends Controller
      */
     public function destroy(Request $request, User $user): JsonResponse
     {
+        if ($user->hasRole('Super Admin') && ! $request->user()?->hasRole('Super Admin')) {
+            return $this->errorResponse('Super Admin accounts cannot be deleted by non-super-admins.', null, 403);
+        }
+
         // Prevent deleting oneself
         if ($request->user() && $request->user()->id === $user->id) {
             return $this->errorResponse('You cannot delete your own account.', null, 403);

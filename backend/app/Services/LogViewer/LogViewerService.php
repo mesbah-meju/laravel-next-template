@@ -3,7 +3,6 @@
 namespace App\Services\LogViewer;
 
 use App\Services\ActivityLogger;
-use Exception;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -25,7 +24,7 @@ class LogViewerService
     public static function getLogFiles(): array
     {
         $logPath = storage_path('logs');
-        if (!File::exists($logPath)) {
+        if (! File::exists($logPath)) {
             return [];
         }
 
@@ -43,7 +42,7 @@ class LogViewerService
         }
 
         // Sort latest modified first
-        usort($result, fn($a, $b) => strcmp($b['modified_at'], $a['modified_at']));
+        usort($result, fn ($a, $b) => strcmp($b['modified_at'], $a['modified_at']));
 
         return $result;
     }
@@ -54,7 +53,7 @@ class LogViewerService
     public static function resolveSafeLogPath(?string $filename): string
     {
         $logDir = realpath(storage_path('logs'));
-        if (!$filename || $filename === 'default' || $filename === 'laravel.log') {
+        if (! $filename || $filename === 'default' || $filename === 'laravel.log') {
             $path = storage_path('logs/laravel.log');
         } else {
             // Strip any path traversal characters
@@ -63,7 +62,7 @@ class LogViewerService
         }
 
         $realPath = realpath($path);
-        if (!$realPath || !str_starts_with($realPath, $logDir)) {
+        if (! $realPath || ! str_starts_with($realPath, $logDir)) {
             // If file doesn't exist yet or invalid, return default
             return storage_path('logs/laravel.log');
         }
@@ -78,7 +77,7 @@ class LogViewerService
     {
         $filePath = self::resolveSafeLogPath($filename);
 
-        if (!File::exists($filePath)) {
+        if (! File::exists($filePath)) {
             return [
                 'entries' => [],
                 'total' => 0,
@@ -128,7 +127,7 @@ class LogViewerService
             // Filter by search query if specified
             if ($search) {
                 $needle = strtolower($search);
-                if (!str_contains(strtolower($sanitizedMain), $needle) && !str_contains(strtolower($sanitizedTrace ?? ''), $needle)) {
+                if (! str_contains(strtolower($sanitizedMain), $needle) && ! str_contains(strtolower($sanitizedTrace ?? ''), $needle)) {
                     continue;
                 }
             }
@@ -185,7 +184,7 @@ class LogViewerService
 
         ActivityLogger::log(
             action: 'log_cleared',
-            description: "Cleared application log file: " . basename($filePath),
+            description: 'Cleared application log file: '.basename($filePath),
             module: 'error_logs',
             newValues: ['file' => basename($filePath)]
         );
@@ -198,19 +197,19 @@ class LogViewerService
     {
         $filePath = self::resolveSafeLogPath($filename);
 
-        if (!File::exists($filePath)) {
+        if (! File::exists($filePath)) {
             abort(404, 'Log file does not exist.');
         }
 
         $rawContent = File::get($filePath);
         $sanitized = self::sanitize($rawContent);
 
-        $tempPath = storage_path('app/temp_' . basename($filePath));
+        $tempPath = storage_path('app/temp_'.basename($filePath));
         File::put($tempPath, $sanitized);
 
         ActivityLogger::log(
             action: 'log_downloaded',
-            description: "Downloaded sanitized application log: " . basename($filePath),
+            description: 'Downloaded sanitized application log: '.basename($filePath),
             module: 'error_logs',
             newValues: ['file' => basename($filePath)]
         );

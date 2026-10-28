@@ -31,7 +31,7 @@ export interface ModuleDashboardWidget {
   description?: string;
   permission?: string;
   colSpan?: 1 | 2 | 3 | 4; // grid column width span
-  component: React.ComponentType<{ data?: any }>;
+  component: React.ComponentType<{ data?: unknown }>;
 }
 
 export interface ModuleCommandItem {

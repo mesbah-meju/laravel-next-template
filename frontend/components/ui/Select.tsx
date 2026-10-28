@@ -147,6 +147,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                   type="button"
                   role="combobox"
                   aria-expanded={isOpen}
+                  aria-controls={`${selectId}-listbox`}
                   aria-haspopup="listbox"
                   aria-invalid={!!errorMessage}
                   aria-describedby={errorMessage ? `${selectId}-error` : displayedHint ? `${selectId}-hint` : undefined}
@@ -212,7 +213,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                   </div>
 
                   {/* Items List */}
-                  <div role="listbox" className="max-h-60 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
+                  <div id={`${selectId}-listbox`} role="listbox" className="max-h-60 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
                     {filteredOptions.length === 0 ? (
                       <div className="py-6 text-center text-sm text-gray-400">{emptyText}</div>
                     ) : (

@@ -19,7 +19,7 @@ class NotificationDispatcher
     public static function dispatch(string $templateKey, User $recipient, array $data = []): bool
     {
         $template = NotificationTemplate::where('key', $templateKey)->first();
-        if (!$template || !$template->is_active) {
+        if (! $template || ! $template->is_active) {
             return false;
         }
 
@@ -50,7 +50,7 @@ class NotificationDispatcher
         }
 
         // 2. Email Channel
-        if (in_array('email', $channels) && !empty($recipient->email)) {
+        if (in_array('email', $channels) && ! empty($recipient->email)) {
             try {
                 Mail::send([], [], function ($msg) use ($recipient, $title, $message) {
                     $msg->to($recipient->email)

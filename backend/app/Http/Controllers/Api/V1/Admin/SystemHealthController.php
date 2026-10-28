@@ -7,7 +7,6 @@ use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 use Throwable;
 
 class SystemHealthController extends Controller
@@ -26,10 +25,10 @@ class SystemHealthController extends Controller
             'name' => 'PHP Runtime',
             'version' => PHP_VERSION,
             'status' => version_compare(PHP_VERSION, '8.2.0', '>=') ? 'healthy' : 'warning',
-            'message' => 'PHP ' . PHP_VERSION,
+            'message' => 'PHP '.PHP_VERSION,
             'details' => [
                 'memory_limit' => ini_get('memory_limit'),
-                'max_execution_time' => ini_get('max_execution_time') . 's',
+                'max_execution_time' => ini_get('max_execution_time').'s',
                 'opcache_enabled' => extension_loaded('Zend OPcache') && ini_get('opcache.enable'),
             ],
         ];
@@ -39,7 +38,7 @@ class SystemHealthController extends Controller
             'name' => 'Laravel Framework',
             'version' => app()->version(),
             'status' => 'healthy',
-            'message' => 'Laravel ' . app()->version(),
+            'message' => 'Laravel '.app()->version(),
             'details' => [
                 'environment' => app()->environment(),
                 'debug_mode' => config('app.debug'),
@@ -78,7 +77,7 @@ class SystemHealthController extends Controller
 
         // 4. Cache Store
         try {
-            $cacheKey = 'health_ping_' . time();
+            $cacheKey = 'health_ping_'.time();
             Cache::put($cacheKey, 'ok', 5);
             $cacheVal = Cache::get($cacheKey);
             Cache::forget($cacheKey);
@@ -87,7 +86,7 @@ class SystemHealthController extends Controller
                 'name' => 'Cache System',
                 'driver' => config('cache.default'),
                 'status' => $cacheVal === 'ok' ? 'healthy' : 'warning',
-                'message' => 'Cache store responsive (' . config('cache.default') . ')',
+                'message' => 'Cache store responsive ('.config('cache.default').')',
                 'details' => [
                     'store' => config('cache.default'),
                 ],
@@ -132,7 +131,7 @@ class SystemHealthController extends Controller
                 'name' => 'Queue Engine',
                 'driver' => config('queue.default'),
                 'status' => 'healthy',
-                'message' => 'Driver: ' . config('queue.default'),
+                'message' => 'Driver: '.config('queue.default'),
                 'details' => ['driver' => config('queue.default')],
             ];
         }

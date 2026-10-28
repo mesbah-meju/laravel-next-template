@@ -68,9 +68,9 @@ class NotificationAndSettingTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['id', 'data', 'read_at', 'created_at']
+                    '*' => ['id', 'data', 'read_at', 'created_at'],
                 ],
-                'unread_count'
+                'unread_count',
             ]);
 
         $notificationId = $listResponse->json('data.0.id');
@@ -106,7 +106,7 @@ class NotificationAndSettingTest extends TestCase
                 ],
             ])
             ->assertJsonStructure([
-                'sections' => ['general', 'branding', 'localization', 'email', 'notifications', 'security']
+                'sections' => ['general', 'branding', 'localization', 'email', 'notifications', 'security'],
             ]);
     }
 

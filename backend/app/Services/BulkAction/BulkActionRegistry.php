@@ -2,8 +2,9 @@
 
 namespace App\Services\BulkAction;
 
-use Closure;
-use Exception;
+use App\Models\ActivityLog;
+use App\Models\Notification;
+use App\Models\User;
 
 class BulkActionRegistry
 {
@@ -12,7 +13,7 @@ class BulkActionRegistry
     /**
      * Register bulk actions for a given resource.
      *
-     * @param string $resource e.g. 'users', 'media', 'activity_logs'
+     * @param  string  $resource  e.g. 'users', 'media', 'activity_logs'
      * @param array<string, array{
      *     label: string,
      *     permission: string,
@@ -35,6 +36,7 @@ class BulkActionRegistry
     public static function getActions(string $resource): array
     {
         self::ensureDefaults();
+
         return self::$registrations[$resource] ?? [];
     }
 
@@ -44,6 +46,7 @@ class BulkActionRegistry
     public static function getAction(string $resource, string $actionKey): ?array
     {
         self::ensureDefaults();
+
         return self::$registrations[$resource][$actionKey] ?? null;
     }
 
@@ -52,7 +55,7 @@ class BulkActionRegistry
      */
     protected static function ensureDefaults(): void
     {
-        if (!isset(self::$registrations['users'])) {
+        if (! isset(self::$registrations['users'])) {
             self::register('users', [
                 'delete' => [
                     'label' => 'Delete Selected Users',
@@ -62,7 +65,15 @@ class BulkActionRegistry
                     'handler' => function (array $ids, $actor) {
                         // Prevent deleting self
                         $filteredIds = array_values(array_diff($ids, [$actor->id]));
-                        $count = \App\Models\User::whereIn('id', $filteredIds)->delete();
+                        $query = User::whereIn('id', $filteredIds);
+
+                        // Non-Super Admins cannot delete Super Admin accounts
+                        if (! $actor->hasRole('Super Admin')) {
+                            $query->whereDoesntHave('roles', fn ($q) => $q->where('name', 'Super Admin'));
+                        }
+
+                        $count = $query->delete();
+
                         return ['processed' => count($ids), 'successful' => $count, 'failed' => count($ids) - $count];
                     },
                 ],
@@ -70,9 +81,17 @@ class BulkActionRegistry
                     'label' => 'Set Status to Active',
                     'permission' => 'manage-users',
                     'danger' => false,
-                    'handler' => function (array $ids) {
-                        $count = \App\Models\User::whereIn('id', $ids)->update(['status' => 'active']);
-                        return ['processed' => count($ids), 'successful' => $count, 'failed' => 0];
+                    'handler' => function (array $ids, $actor) {
+                        $query = User::whereIn('id', $ids);
+
+                        // Non-Super Admins cannot modify Super Admin accounts
+                        if (! $actor->hasRole('Super Admin')) {
+                            $query->whereDoesntHave('roles', fn ($q) => $q->where('name', 'Super Admin'));
+                        }
+
+                        $count = $query->update(['status' => 'active']);
+
+                        return ['processed' => count($ids), 'successful' => $count, 'failed' => count($ids) - $count];
                     },
                 ],
                 'deactivate' => [
@@ -80,15 +99,24 @@ class BulkActionRegistry
                     'permission' => 'manage-users',
                     'danger' => true,
                     'handler' => function (array $ids, $actor) {
+                        // Prevent deactivating self
                         $filteredIds = array_values(array_diff($ids, [$actor->id]));
-                        $count = \App\Models\User::whereIn('id', $filteredIds)->update(['status' => 'inactive']);
+                        $query = User::whereIn('id', $filteredIds);
+
+                        // Non-Super Admins cannot deactivate Super Admin accounts
+                        if (! $actor->hasRole('Super Admin')) {
+                            $query->whereDoesntHave('roles', fn ($q) => $q->where('name', 'Super Admin'));
+                        }
+
+                        $count = $query->update(['status' => 'inactive']);
+
                         return ['processed' => count($ids), 'successful' => $count, 'failed' => count($ids) - $count];
                     },
                 ],
             ]);
         }
 
-        if (!isset(self::$registrations['activity_logs'])) {
+        if (! isset(self::$registrations['activity_logs'])) {
             self::register('activity_logs', [
                 'delete' => [
                     'label' => 'Delete Selected Logs',
@@ -96,23 +124,25 @@ class BulkActionRegistry
                     'danger' => true,
                     'requires_confirmation' => true,
                     'handler' => function (array $ids) {
-                        $count = \App\Models\ActivityLog::whereIn('id', $ids)->delete();
+                        $count = ActivityLog::whereIn('id', $ids)->delete();
+
                         return ['processed' => count($ids), 'successful' => $count, 'failed' => 0];
                     },
                 ],
             ]);
         }
 
-        if (!isset(self::$registrations['notifications'])) {
+        if (! isset(self::$registrations['notifications'])) {
             self::register('notifications', [
                 'mark_read' => [
                     'label' => 'Mark as Read',
                     'permission' => 'view-notifications',
                     'danger' => false,
                     'handler' => function (array $ids, $actor) {
-                        $count = \App\Models\Notification::whereIn('id', $ids)
+                        $count = Notification::whereIn('id', $ids)
                             ->where('notifiable_id', $actor->id)
                             ->update(['read_at' => now()]);
+
                         return ['processed' => count($ids), 'successful' => $count, 'failed' => 0];
                     },
                 ],
@@ -121,9 +151,10 @@ class BulkActionRegistry
                     'permission' => 'view-notifications',
                     'danger' => true,
                     'handler' => function (array $ids, $actor) {
-                        $count = \App\Models\Notification::whereIn('id', $ids)
+                        $count = Notification::whereIn('id', $ids)
                             ->where('notifiable_id', $actor->id)
                             ->delete();
+
                         return ['processed' => count($ids), 'successful' => $count, 'failed' => 0];
                     },
                 ],

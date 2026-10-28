@@ -41,6 +41,7 @@ class ImportExportController extends Controller
         // Clean out raw query closures for JSON response
         $clean = array_map(function ($exp) {
             unset($exp['query']);
+
             return $exp;
         }, $exporters);
 
@@ -60,12 +61,12 @@ class ImportExportController extends Controller
         $type = $request->input('importable_type');
         $definition = ImportRegistry::get($type);
 
-        if (!$definition) {
+        if (! $definition) {
             return $this->errorResponse("Unsupported import type: {$type}", 400);
         }
 
         // Authorize
-        if (!empty($definition['permission']) && !$request->user()->can($definition['permission']) && !$request->user()->hasRole('Super Admin')) {
+        if (! empty($definition['permission']) && ! $request->user()->can($definition['permission']) && ! $request->user()->hasRole('Super Admin')) {
             return $this->errorResponse('Unauthorized to import this resource.', 403);
         }
 
@@ -73,7 +74,7 @@ class ImportExportController extends Controller
         $originalFilename = $file->getClientOriginalName();
         $extension = strtolower($file->getClientOriginalExtension());
 
-        if (!in_array($extension, ['csv', 'txt', 'xlsx'])) {
+        if (! in_array($extension, ['csv', 'txt', 'xlsx'])) {
             return $this->errorResponse('Invalid file format. Only CSV and XLSX are supported.', 422);
         }
 
@@ -86,6 +87,7 @@ class ImportExportController extends Controller
             $totalRows = FileParser::countRows($fullPath, $extension);
         } catch (Exception $e) {
             Storage::disk('local')->delete($storedPath);
+
             return $this->errorResponse("Could not parse file: {$e->getMessage()}", 422);
         }
 
@@ -106,7 +108,7 @@ class ImportExportController extends Controller
             $normalizedHeader = strtolower(str_replace([' ', '_', '-'], '', $header));
 
             foreach ($definition['fields'] as $field) {
-                $aliases = array_map(fn($a) => strtolower(str_replace([' ', '_', '-'], '', $a)), $field['aliases'] ?? [$field['name']]);
+                $aliases = array_map(fn ($a) => strtolower(str_replace([' ', '_', '-'], '', $a)), $field['aliases'] ?? [$field['name']]);
                 if (in_array($normalizedHeader, $aliases) || $normalizedHeader === strtolower($field['name'])) {
                     $matchedField = $field['name'];
                     break;
@@ -132,6 +134,7 @@ class ImportExportController extends Controller
     public function previewMapping(Request $request, string $uuid): JsonResponse
     {
         $import = Import::where('uuid', $uuid)->firstOrFail();
+        $this->authorizeImportAccess($import, $request);
 
         $request->validate([
             'column_mapping' => ['required', 'array'],
@@ -158,6 +161,7 @@ class ImportExportController extends Controller
     public function process(Request $request, string $uuid): JsonResponse
     {
         $import = Import::where('uuid', $uuid)->firstOrFail();
+        $this->authorizeImportAccess($import, $request);
 
         $request->validate([
             'column_mapping' => ['required', 'array'],
@@ -184,9 +188,11 @@ class ImportExportController extends Controller
     /**
      * Step 7: Get progress and results.
      */
-    public function progress(string $uuid): JsonResponse
+    public function progress(Request $request, string $uuid): JsonResponse
     {
         $import = Import::where('uuid', $uuid)->firstOrFail();
+        $this->authorizeImportAccess($import, $request);
+
         return $this->successResponse($import, 'Import status retrieved.');
     }
 
@@ -195,8 +201,13 @@ class ImportExportController extends Controller
      */
     public function history(Request $request): JsonResponse
     {
-        $imports = Import::with('user:id,name,email')
-            ->latest()
+        $query = Import::with('user:id,name,email');
+
+        if (! $request->user()?->hasRole('Super Admin') && ! $request->user()?->can('manage-imports')) {
+            $query->where('user_id', $request->user()?->id);
+        }
+
+        $imports = $query->latest()
             ->paginate($request->input('per_page', 15));
 
         return $this->paginatedResponse($imports, 'Import history retrieved.');
@@ -205,16 +216,18 @@ class ImportExportController extends Controller
     /**
      * Download failed rows report.
      */
-    public function downloadErrors(string $uuid): StreamedResponse|JsonResponse
+    public function downloadErrors(Request $request, string $uuid): StreamedResponse|JsonResponse
     {
         $import = Import::where('uuid', $uuid)->firstOrFail();
+        $this->authorizeImportAccess($import, $request);
+
         $errors = $import->errors_summary ?? [];
 
         if (empty($errors)) {
             return $this->errorResponse('No failure records available for this import.', 404);
         }
 
-        $filename = 'import_failures_' . $import->uuid . '.csv';
+        $filename = 'import_failures_'.$import->uuid.'.csv';
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
@@ -222,7 +235,7 @@ class ImportExportController extends Controller
 
         return response()->stream(function () use ($errors) {
             $handle = fopen('php://output', 'w');
-            fputs($handle, "\xEF\xBB\xBF");
+            fwrite($handle, "\xEF\xBB\xBF");
             fputcsv($handle, ['Row Number', 'Errors', 'Sample Data']);
 
             foreach ($errors as $item) {
@@ -243,11 +256,11 @@ class ImportExportController extends Controller
     public function export(Request $request, string $key): StreamedResponse|JsonResponse
     {
         $definition = ExportRegistry::get($key);
-        if (!$definition) {
+        if (! $definition) {
             return $this->errorResponse("Unknown export type: {$key}", 404);
         }
 
-        if (!empty($definition['permission']) && !$request->user()->can($definition['permission']) && !$request->user()->hasRole('Super Admin')) {
+        if (! empty($definition['permission']) && ! $request->user()->can($definition['permission']) && ! $request->user()->hasRole('Super Admin')) {
             return $this->errorResponse('Unauthorized to export this resource.', 403);
         }
 
@@ -256,9 +269,21 @@ class ImportExportController extends Controller
             'search' => $request->input('search'),
             'sort_by' => $request->input('sort_by'),
             'sort_direction' => $request->input('sort_direction'),
-            'filename' => $request->input('filename', $key . '_export_' . date('Y_m_d_His')),
+            'filename' => $request->input('filename', $key.'_export_'.date('Y_m_d_His')),
         ];
 
         return ExportProcessor::streamCsv($key, $options);
+    }
+
+    private function authorizeImportAccess(Import $import, Request $request): void
+    {
+        $user = $request->user();
+        if (! $user) {
+            abort(401, 'Unauthenticated.');
+        }
+
+        if ($import->user_id !== $user->id && ! $user->hasRole('Super Admin') && ! $user->can('manage-imports')) {
+            abort(403, 'Unauthorized access to this import resource.');
+        }
     }
 }

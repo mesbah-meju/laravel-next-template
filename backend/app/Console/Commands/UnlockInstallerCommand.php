@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 class UnlockInstallerCommand extends Command
 {
     protected $signature = 'app:unlock-installer';
+
     protected $description = 'Remove installation lock file to intentionally re-enable the web installer.';
 
     public function handle(): int

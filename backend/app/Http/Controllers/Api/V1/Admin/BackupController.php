@@ -42,6 +42,7 @@ class BackupController extends Controller
 
         try {
             $backup = BackupService::createBackup($request->user()?->id);
+
             return $this->successResponse($backup, 'Database backup generated successfully.', 201);
         } catch (Exception $e) {
             return $this->errorResponse("Backup creation failed: {$e->getMessage()}", null, 500);

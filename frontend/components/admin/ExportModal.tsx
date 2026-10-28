@@ -96,7 +96,7 @@ export function ExportModal({
               >
                 <div>
                   <p className="text-xs font-bold">Export Filtered / Search Results</p>
-                  <p className="text-[10px] text-gray-400">Matching query: "{searchQuery}"</p>
+                  <p className="text-[10px] text-gray-400">Matching query: &ldquo;{searchQuery}&rdquo;</p>
                 </div>
                 {scope === 'filtered' && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
               </button>

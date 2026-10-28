@@ -48,6 +48,7 @@ export function MultiSelect({
   isLoading = false,
   className,
 }: MultiSelectProps) {
+  const multiSelectId = React.useId();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -120,6 +121,7 @@ export function MultiSelect({
           <div
             role="combobox"
             aria-expanded={isOpen}
+            aria-controls={`${multiSelectId}-listbox`}
             aria-disabled={disabled}
             aria-invalid={Boolean(errorMessage)}
             className={cn(
@@ -230,7 +232,7 @@ export function MultiSelect({
             </div>
 
             {/* Options List */}
-            <div className="max-h-60 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
+            <div id={`${multiSelectId}-listbox`} role="listbox" className="max-h-60 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
               {filteredOptions.length === 0 ? (
                 <div className="py-6 text-center text-xs text-gray-400">
                   No matching options found.

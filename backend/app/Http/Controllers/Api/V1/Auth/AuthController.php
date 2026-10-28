@@ -4,16 +4,14 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\ActivityLogger;
+use App\Services\SecurityService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
-
-use App\Services\ActivityLogger;
-use App\Services\SecurityService;
 
 class AuthController extends Controller
 {
@@ -33,7 +31,7 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $throttleKey = Str::transliterate(Str::lower($request->input('email')) . '|' . $request->ip());
+        $throttleKey = Str::transliterate(Str::lower($request->input('email')).'|'.$request->ip());
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -43,6 +41,7 @@ class AuthController extends Controller
                 description: "Login throttled for email: {$request->input('email')}",
                 module: 'auth'
             );
+
             return $this->errorResponse(
                 trans('auth.throttle', ['seconds' => $seconds, 'minutes' => ceil($seconds / 60)]),
                 ['email' => [trans('auth.throttle', ['seconds' => $seconds, 'minutes' => ceil($seconds / 60)])]],
@@ -50,7 +49,7 @@ class AuthController extends Controller
             );
         }
 
-        if (!Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+        if (! Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
             RateLimiter::hit($throttleKey);
             $this->securityService->recordLoginAttempt(null, 'failed', $request->input('email'));
             ActivityLogger::log(
@@ -58,6 +57,7 @@ class AuthController extends Controller
                 description: "Failed login attempt for email: {$request->input('email')}",
                 module: 'auth'
             );
+
             return $this->errorResponse('Invalid credentials.', [
                 'email' => [trans('auth.failed')],
             ], 422);
@@ -68,7 +68,7 @@ class AuthController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if (!$user->isActive()) {
+        if (! $user->isActive()) {
             Auth::logout();
             $request->session()->invalidate();
             $this->securityService->recordLoginAttempt($user, 'blocked', $user->email);
@@ -79,6 +79,7 @@ class AuthController extends Controller
                 subject: $user,
                 userId: $user->id
             );
+
             return $this->errorResponse('Your account has been deactivated. Please contact support.', null, 403);
         }
 
@@ -131,8 +132,12 @@ class AuthController extends Controller
                 userId: $user->id
             );
 
+            // Clean up any lingering impersonation association for this target user
+            \Illuminate\Support\Facades\Cache::forget("impersonation_target_{$user->id}");
+
             // Delete current access token if token-based
             if (method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
+                \Illuminate\Support\Facades\Cache::forget("impersonation_token_{$user->currentAccessToken()->id}");
                 $user->currentAccessToken()->delete();
             }
         }
@@ -155,7 +160,7 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return $this->errorResponse('Unauthenticated.', null, 401);
         }
 

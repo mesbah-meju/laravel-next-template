@@ -30,7 +30,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useApiForm } from '@/hooks/useApiForm';
 import { useToast } from '@/hooks/useToast';
 import { systemNoticeService } from '@/services/systemNoticeService';
-import { SystemNotice, SystemNoticeFormData } from '@/types/systemNotice';
+import { SystemNotice, SystemNoticeFormData, NoticeType, NoticePriority } from '@/types/systemNotice';
 import { formatDate, cn } from '@/lib/utils';
 
 export default function SystemNoticesPage() {
@@ -247,7 +247,7 @@ export default function SystemNoticesPage() {
               <FormField label="Notice Type" error={errors.type} required>
                 <Select
                   value={values.type}
-                  onChange={(e) => setValues({ ...values, type: e.target.value as any })}
+                  onChange={(e) => setValues({ ...values, type: e.target.value as NoticeType })}
                   options={[
                     { label: 'Information (Blue)', value: 'info' },
                     { label: 'Warning (Amber)', value: 'warning' },
@@ -260,7 +260,7 @@ export default function SystemNoticesPage() {
               <FormField label="Priority" error={errors.priority} required>
                 <Select
                   value={values.priority}
-                  onChange={(e) => setValues({ ...values, priority: e.target.value as any })}
+                  onChange={(e) => setValues({ ...values, priority: e.target.value as NoticePriority })}
                   options={[
                     { label: 'Low', value: 'low' },
                     { label: 'Medium', value: 'medium' },

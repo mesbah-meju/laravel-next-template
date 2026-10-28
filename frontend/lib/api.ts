@@ -55,6 +55,13 @@ apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
     }
   }
 
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('auth_token');
+    if (token && config.headers && !config.headers.Authorization && !config.headers.authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+
   const method = config.method?.toLowerCase();
 
   if (method && ['post', 'put', 'patch', 'delete'].includes(method)) {
@@ -76,16 +83,29 @@ apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) =>
   return config;
 });
 
-// Response interceptor for unified error formatting
+// Response interceptor for unified error formatting and safe CSRF recovery
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string; errors?: Record<string, string[]> }>) => {
+  async (error: AxiosError<{ message?: string; errors?: Record<string, string[]> }>) => {
     const status = error.response?.status;
     const data = error.response?.data;
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
-    // Reset CSRF promise if CSRF mismatch occurs (HTTP 419)
-    if (status === 419) {
+    // Safe CSRF token recovery on HTTP 419 (CSRF mismatch/expired before processing)
+    if (status === 419 && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
       csrfPromise = null;
+
+      try {
+        await ensureCsrfCookie();
+        const freshXsrfToken = getCookie('XSRF-TOKEN');
+        if (freshXsrfToken && originalRequest.headers) {
+          originalRequest.headers['X-XSRF-TOKEN'] = freshXsrfToken;
+        }
+        return apiClient(originalRequest);
+      } catch {
+        // If recovery fails, continue down to rejection
+      }
     }
 
     const formattedError = {

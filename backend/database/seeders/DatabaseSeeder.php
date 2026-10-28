@@ -17,5 +17,7 @@ class DatabaseSeeder extends Seeder
             SettingSeeder::class,
             MenuSeeder::class,
         ]);
+
+        \App\Services\Installer\InstallerService::lock();
     }
 }

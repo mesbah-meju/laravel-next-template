@@ -4,7 +4,6 @@ namespace Tests\Feature\Api\V1;
 
 use App\Services\Installer\InstallerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class InstallerTest extends TestCase
@@ -45,7 +44,7 @@ class InstallerTest extends TestCase
                 'php_version',
                 'extensions',
                 'permissions',
-            ]
+            ],
         ]);
     }
 

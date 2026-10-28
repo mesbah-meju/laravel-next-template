@@ -43,11 +43,11 @@ export interface ImportRecord {
   failed_rows: number;
   skipped_rows: number;
   column_mapping?: Record<string, string>;
-  options?: Record<string, any>;
+  options?: Record<string, unknown>;
   errors_summary?: Array<{
     row: number;
     errors: string[];
-    data?: Record<string, any>;
+    data?: Record<string, unknown>;
   }>;
   started_at?: string;
   completed_at?: string;
@@ -70,7 +70,7 @@ export interface ImportUploadResponse {
 
 export interface PreviewMappingResponse {
   headers: string[];
-  mapped_rows: Array<Record<string, any>>;
+  mapped_rows: Array<Record<string, unknown>>;
   errors: Record<number, Record<string, string[]>>;
   total_rows_estimate: number;
 }

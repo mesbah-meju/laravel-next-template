@@ -45,6 +45,7 @@ class SystemUpdateController extends Controller
 
         try {
             $record = UpdateService::executeUpdate($validated['version'], $request->user()?->id);
+
             return $this->successResponse($record, "System updated successfully to version {$record->version_to}.");
         } catch (Exception $e) {
             return $this->errorResponse("System update failed: {$e->getMessage()}", null, 500);

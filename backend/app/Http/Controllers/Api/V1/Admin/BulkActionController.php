@@ -54,12 +54,12 @@ class BulkActionController extends Controller
         $payload = $request->input('payload', []);
 
         $action = BulkActionRegistry::getAction($resource, $actionKey);
-        if (!$action) {
+        if (! $action) {
             return $this->errorResponse("Unknown bulk action '{$actionKey}' for resource '{$resource}'", 400);
         }
 
         $user = $request->user();
-        if (!empty($action['permission']) && !$user->hasRole('Super Admin') && !$user->can($action['permission'])) {
+        if (! empty($action['permission']) && ! $user->hasRole('Super Admin') && ! $user->can($action['permission'])) {
             return $this->errorResponse('Unauthorized to execute this bulk action.', 403);
         }
 
@@ -68,8 +68,8 @@ class BulkActionController extends Controller
             $result = $handler($ids, $user, $payload);
 
             ActivityLogger::log(
-                action: 'bulk_' . $actionKey,
-                description: "Executed bulk action '{$actionKey}' on " . count($ids) . " {$resource} records",
+                action: 'bulk_'.$actionKey,
+                description: "Executed bulk action '{$actionKey}' on ".count($ids)." {$resource} records",
                 module: $resource,
                 newValues: [
                     'action' => $actionKey,

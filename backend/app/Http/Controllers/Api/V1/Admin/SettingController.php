@@ -84,9 +84,9 @@ class SettingController extends Controller
                 'mail_from_name' => $this->settingService->get('mail_from_name', config('mail.from.name')),
             ];
 
-            Mail::raw('This is a test email sent from ' . config('app.name') . ' to verify your SMTP configuration.', function ($message) use ($recipient) {
+            Mail::raw('This is a test email sent from '.config('app.name').' to verify your SMTP configuration.', function ($message) use ($recipient) {
                 $message->to($recipient)
-                    ->subject('SMTP Configuration Test — ' . config('app.name'));
+                    ->subject('SMTP Configuration Test — '.config('app.name'));
             });
 
             ActivityLogger::log(
@@ -97,7 +97,7 @@ class SettingController extends Controller
 
             return $this->successResponse(null, "Test email dispatched to {$recipient} successfully.");
         } catch (Throwable $e) {
-            return $this->errorResponse('Failed to send test email: ' . $e->getMessage(), null, 500);
+            return $this->errorResponse('Failed to send test email: '.$e->getMessage(), null, 500);
         }
     }
 }

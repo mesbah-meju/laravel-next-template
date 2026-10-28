@@ -16,7 +16,7 @@ class ImportProcessor
     public static function preview(Import $import, array $columnMapping): array
     {
         $definition = ImportRegistry::get($import->importable_type);
-        if (!$definition) {
+        if (! $definition) {
             throw new Exception("Unknown import type: {$import->importable_type}");
         }
 
@@ -38,7 +38,7 @@ class ImportProcessor
                 }
             }
 
-            if (!empty($rules)) {
+            if (! empty($rules)) {
                 $validator = Validator::make($mappedRow, $rules);
                 if ($validator->fails()) {
                     $validationErrors[$index] = $validator->errors()->toArray();
@@ -60,11 +60,12 @@ class ImportProcessor
     public static function process(Import $import): void
     {
         $definition = ImportRegistry::get($import->importable_type);
-        if (!$definition) {
+        if (! $definition) {
             $import->update([
                 'status' => 'failed',
                 'errors_summary' => ['error' => "Unknown import type: {$import->importable_type}"],
             ]);
+
             return;
         }
 
@@ -74,11 +75,12 @@ class ImportProcessor
         ]);
 
         $filePath = Storage::disk('local')->path($import->stored_path);
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             $import->update([
                 'status' => 'failed',
                 'errors_summary' => ['error' => 'Import file not found on disk.'],
             ]);
+
             return;
         }
 
@@ -105,7 +107,7 @@ class ImportProcessor
                 $processed++;
                 $mappedRow = self::transformRow($rawRow, $columnMapping);
 
-                if (!empty($rules)) {
+                if (! empty($rules)) {
                     $validator = Validator::make($mappedRow, $rules);
                     if ($validator->fails()) {
                         $failed++;
@@ -116,13 +118,14 @@ class ImportProcessor
                                 'data' => array_slice($mappedRow, 0, 5),
                             ];
                         }
+
                         continue;
                     }
                 }
 
                 try {
                     $result = is_callable($processor)
-                        ? $processor($mappedRow, $duplicateStrategy, $options)
+                        ? $processor($mappedRow, $duplicateStrategy, $options, $import->user)
                         : 'created';
 
                     if ($result === 'skipped') {
@@ -172,6 +175,11 @@ class ImportProcessor
                 'errors_summary' => ['exception' => $e->getMessage()],
                 'completed_at' => now(),
             ]);
+        } finally {
+            // Clean up temporary uploaded file now that processing is finished
+            if (! empty($import->stored_path) && Storage::disk('local')->exists($import->stored_path)) {
+                Storage::disk('local')->delete($import->stored_path);
+            }
         }
     }
 
@@ -187,6 +195,7 @@ class ImportProcessor
             }
             $transformed[$appField] = $rawRow[$fileColumn] ?? null;
         }
+
         return $transformed;
     }
 }

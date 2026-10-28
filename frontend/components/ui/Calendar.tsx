@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 export interface CalendarProps {
   mode?: 'single' | 'range';
   selected?: Date | { from?: Date; to?: Date } | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSelect?: (date: any) => void;
   minDate?: Date;
   maxDate?: Date;

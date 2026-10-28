@@ -93,7 +93,7 @@ export function DatePicker({
             role="button"
             tabIndex={disabled ? -1 : 0}
             aria-expanded={isOpen}
-            aria-invalid={Boolean(errorMessage)}
+            aria-describedby={errorMessage ? `${id}-error` : undefined}
             className={cn(
               'flex h-9 sm:h-10 w-full items-center justify-between rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-1 text-sm shadow-2xs transition-colors cursor-pointer select-none',
               'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:border-indigo-500',

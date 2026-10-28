@@ -36,7 +36,7 @@ class RoleController extends Controller
 
         $role = Role::create(['name' => $validated['name']]);
 
-        if (!empty($validated['permissions'])) {
+        if (! empty($validated['permissions'])) {
             $role->syncPermissions($validated['permissions']);
         }
 
@@ -60,8 +60,12 @@ class RoleController extends Controller
      */
     public function update(Request $request, Role $role): JsonResponse
     {
+        if ($role->name === 'Super Admin' && ! $request->user()?->hasRole('Super Admin')) {
+            return $this->errorResponse('Only Super Admins can modify the Super Admin role.', null, 403);
+        }
+
         $validated = $request->validate([
-            'name' => 'required|string|max:100|unique:roles,name,' . $role->id,
+            'name' => 'required|string|max:100|unique:roles,name,'.$role->id,
             'permissions' => 'nullable|array',
             'permissions.*' => 'string|exists:permissions,name',
         ]);
@@ -89,6 +93,10 @@ class RoleController extends Controller
     {
         if ($role->name === 'Super Admin') {
             return $this->errorResponse('Super Admin role cannot be deleted.', null, 403);
+        }
+
+        if ($role->users()->count() > 0) {
+            return $this->errorResponse('Cannot delete a role that currently has assigned users.', null, 422);
         }
 
         $role->delete();

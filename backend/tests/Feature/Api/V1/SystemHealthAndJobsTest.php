@@ -76,7 +76,7 @@ class SystemHealthAndJobsTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['id', 'uuid', 'display_name', 'exception_summary', 'queue', 'failed_at']
+                    '*' => ['id', 'uuid', 'display_name', 'exception_summary', 'queue', 'failed_at'],
                 ],
                 'stats' => ['pending_jobs', 'failed_jobs', 'queue_driver'],
                 'pagination',

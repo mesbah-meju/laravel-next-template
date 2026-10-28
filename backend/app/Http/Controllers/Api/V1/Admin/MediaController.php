@@ -4,12 +4,11 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Media;
+use App\Services\ActivityLogger;
 use App\Services\MediaService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
-use App\Services\ActivityLogger;
 
 class MediaController extends Controller
 {
@@ -60,7 +59,7 @@ class MediaController extends Controller
                 );
             }
 
-            return $this->successResponse($uploaded, count($uploaded) . ' files uploaded successfully.', 201);
+            return $this->successResponse($uploaded, count($uploaded).' files uploaded successfully.', 201);
         }
 
         $media = $this->mediaService->uploadFile($request->file('file'), $userId);

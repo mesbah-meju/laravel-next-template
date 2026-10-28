@@ -19,9 +19,7 @@ class ProcessImportJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public Import $import)
-    {
-    }
+    public function __construct(public Import $import) {}
 
     /**
      * Execute the job.

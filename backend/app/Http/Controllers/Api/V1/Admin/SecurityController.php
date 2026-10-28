@@ -30,12 +30,12 @@ class SecurityController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('email', 'like', "%{$search}%")
-                  ->orWhere('ip_address', 'like', "%{$search}%")
-                  ->orWhere('browser', 'like', "%{$search}%")
-                  ->orWhere('platform', 'like', "%{$search}%")
-                  ->orWhereHas('user', function ($uq) use ($search) {
-                      $uq->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('ip_address', 'like', "%{$search}%")
+                    ->orWhere('browser', 'like', "%{$search}%")
+                    ->orWhere('platform', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -107,9 +107,9 @@ class SecurityController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($request->input('password'), $user->password)) {
+        if (! Hash::check($request->input('password'), $user->password)) {
             return $this->errorResponse('Incorrect password provided.', [
-                'password' => ['The provided password does not match our records.']
+                'password' => ['The provided password does not match our records.'],
             ], 422);
         }
 

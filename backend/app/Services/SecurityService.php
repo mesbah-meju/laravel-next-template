@@ -117,7 +117,7 @@ class SecurityService
             $browser = 'Google Chrome';
         } elseif (preg_match('/firefox|fxios/i', $userAgent)) {
             $browser = 'Mozilla Firefox';
-        } elseif (preg_match('/safari/i', $userAgent) && !preg_match('/chrome/i', $userAgent)) {
+        } elseif (preg_match('/safari/i', $userAgent) && ! preg_match('/chrome/i', $userAgent)) {
             $browser = 'Apple Safari';
         } elseif (preg_match('/opera|opr/i', $userAgent)) {
             $browser = 'Opera';

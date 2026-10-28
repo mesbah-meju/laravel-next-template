@@ -3,11 +3,11 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Models\User;
-use App\Models\SystemUpdate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class SystemUpdateTest extends TestCase
@@ -15,13 +15,14 @@ class SystemUpdateTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $regularUser;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $role = Role::create(['name' => 'Super Admin']);
         Permission::create(['name' => 'view-system-updates']);
@@ -62,8 +63,8 @@ class SystemUpdateTest extends TestCase
                 'preflight' => [
                     'ready',
                     'checks',
-                ]
-            ]
+                ],
+            ],
         ]);
     }
 
@@ -73,7 +74,7 @@ class SystemUpdateTest extends TestCase
 
         $response = $this->actingAs($this->admin, 'sanctum')
             ->postJson('/api/v1/admin/system/updates/execute', [
-                'version' => '1.1.0'
+                'version' => '1.1.0',
             ]);
 
         $response->assertStatus(200);

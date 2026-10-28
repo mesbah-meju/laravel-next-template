@@ -25,6 +25,7 @@ class ImpersonationController extends Controller
     {
         try {
             $result = $this->impersonationService->impersonate($request->user(), $user);
+
             return $this->successResponse($result, "Now impersonating {$user->name}.");
         } catch (Exception $e) {
             return $this->errorResponse($e->getMessage(), null, 403);
@@ -41,6 +42,7 @@ class ImpersonationController extends Controller
 
         try {
             $result = $this->impersonationService->stop($user, $token);
+
             return $this->successResponse($result, 'Impersonation ended. Returned to Super Admin account.');
         } catch (Exception $e) {
             return $this->errorResponse($e->getMessage(), 400);
@@ -57,7 +59,7 @@ class ImpersonationController extends Controller
         $status = $this->impersonationService->getStatus($user, $token);
 
         return $this->successResponse([
-            'is_impersonating' => !empty($status),
+            'is_impersonating' => ! empty($status),
             'impersonation_info' => $status,
         ], 'Impersonation status retrieved.');
     }

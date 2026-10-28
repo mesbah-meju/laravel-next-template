@@ -22,7 +22,7 @@ export interface DashboardData {
     title: string;
     value?: string | number;
     subtext?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }>;
 }
 

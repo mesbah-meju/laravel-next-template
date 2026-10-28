@@ -54,7 +54,7 @@ trait ApiResponse
             ],
         ];
 
-        if (!empty($meta)) {
+        if (! empty($meta)) {
             $payload['meta'] = $meta;
         }
 

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class LogViewerTest extends TestCase
@@ -15,13 +16,14 @@ class LogViewerTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $regularUser;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $role = Role::create(['name' => 'Super Admin']);
         Permission::create(['name' => 'view-error-logs']);
@@ -64,10 +66,10 @@ class LogViewerTest extends TestCase
             'success',
             'data' => [
                 'entries' => [
-                    '*' => ['id', 'timestamp', 'environment', 'severity', 'message', 'stack_trace']
+                    '*' => ['id', 'timestamp', 'environment', 'severity', 'message', 'stack_trace'],
                 ],
-                'files'
-            ]
+                'files',
+            ],
         ]);
     }
 

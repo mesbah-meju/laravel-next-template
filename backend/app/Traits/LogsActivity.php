@@ -16,7 +16,7 @@ trait LogsActivity
             $module = property_exists($model, 'activityModule') ? $model->activityModule : strtolower(class_basename($model));
             ActivityLogger::log(
                 action: 'created',
-                description: "Created {$module} #" . $model->getKey(),
+                description: "Created {$module} #".$model->getKey(),
                 module: $module,
                 subject: $model,
                 newValues: $model->getAttributes()
@@ -30,7 +30,7 @@ trait LogsActivity
 
             ActivityLogger::log(
                 action: 'updated',
-                description: "Updated {$module} #" . $model->getKey(),
+                description: "Updated {$module} #".$model->getKey(),
                 module: $module,
                 subject: $model,
                 oldValues: $original,
@@ -42,7 +42,7 @@ trait LogsActivity
             $module = property_exists($model, 'activityModule') ? $model->activityModule : strtolower(class_basename($model));
             ActivityLogger::log(
                 action: 'deleted',
-                description: "Deleted {$module} #" . $model->getKey(),
+                description: "Deleted {$module} #".$model->getKey(),
                 module: $module,
                 subject: $model,
                 oldValues: $model->getAttributes()

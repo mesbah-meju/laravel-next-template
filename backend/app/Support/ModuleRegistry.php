@@ -16,7 +16,7 @@ class ModuleRegistry
     /**
      * Register a new module.
      *
-     * @param string $key Unique module identifier (e.g. 'blog', 'ecommerce')
+     * @param  string  $key  Unique module identifier (e.g. 'blog', 'ecommerce')
      * @param array{
      *     name: string,
      *     description?: string,

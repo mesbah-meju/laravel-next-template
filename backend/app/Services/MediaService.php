@@ -14,7 +14,7 @@ class MediaService
     protected array $blockedExtensions = [
         'php', 'phar', 'phtml', 'php3', 'php4', 'php5', 'php7', 'phps',
         'cgi', 'pl', 'exe', 'bat', 'cmd', 'sh', 'bash', 'vbs', 'jar',
-        'py', 'asp', 'aspx', 'jsp', 'dll', 'com', 'scr', 'hta'
+        'py', 'asp', 'aspx', 'jsp', 'dll', 'com', 'scr', 'hta',
     ];
 
     /**
@@ -42,7 +42,7 @@ class MediaService
         // Remove any residual trailing extensions or non-alphanumeric chars
         $safeName = Str::slug(preg_replace('/\.(php[0-9]?|phar|phtml|exe|sh|bat)$/i', '', $originalBase)) ?: 'file';
 
-        $fileName = $safeName . '-' . time() . '-' . Str::random(6) . '.' . $extension;
+        $fileName = $safeName.'-'.time().'-'.Str::random(6).'.'.$extension;
 
         $path = $file->storeAs('media', $fileName, 'public');
         $url = Storage::disk('public')->url($path);
@@ -81,7 +81,7 @@ class MediaService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('file_name', 'like', "%{$search}%");
+                    ->orWhere('file_name', 'like', "%{$search}%");
             });
         }
 

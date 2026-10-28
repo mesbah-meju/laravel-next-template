@@ -345,7 +345,7 @@ export function ImportWizard({ isOpen, onClose, importer, onComplete }: ImportWi
                           .filter((f) => f && f !== '__ignore__')
                           .map((f) => (
                             <td key={f} className="p-2.5 text-gray-800 dark:text-gray-200">
-                              {row[f] || '—'}
+                              {String(row[f] ?? '') || '—'}
                             </td>
                           ))}
                         <td className="p-2.5 text-right">
@@ -390,7 +390,7 @@ export function ImportWizard({ isOpen, onClose, importer, onComplete }: ImportWi
                 <button
                   key={strat.id}
                   type="button"
-                  onClick={() => setDuplicateStrategy(strat.id as any)}
+                  onClick={() => setDuplicateStrategy(strat.id as 'skip' | 'update' | 'error')}
                   className={cn(
                     'p-3.5 rounded-xl border text-left transition',
                     duplicateStrategy === strat.id

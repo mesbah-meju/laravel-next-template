@@ -31,6 +31,7 @@ export default function WebInstallerPage() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [isLocked, setIsLocked] = useState<boolean | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+  const [setupToken, setSetupToken] = useState('');
 
   // Step 2: Requirements
   const [requirements, setRequirements] = useState<RequirementsResponse | null>(null);
@@ -101,7 +102,7 @@ export default function WebInstallerPage() {
   const handleTestDatabase = async () => {
     setIsTestingDb(true);
     try {
-      const res = await installerService.testDatabase(formData);
+      const res = await installerService.testDatabase(formData, setupToken);
       toast.success(res.message || 'Database connection successful!');
       setDbTestPassed(true);
     } catch (err: unknown) {
@@ -115,7 +116,7 @@ export default function WebInstallerPage() {
 
   const handleSaveEnvironment = async () => {
     try {
-      await installerService.saveEnvironment(formData);
+      await installerService.saveEnvironment(formData, setupToken);
       toast.success('Configuration saved');
       setCurrentStep(5);
     } catch (err: unknown) {
@@ -127,7 +128,7 @@ export default function WebInstallerPage() {
   const handleRunMigrations = async () => {
     setIsMigrating(true);
     try {
-      const res = await installerService.setupDatabase();
+      const res = await installerService.setupDatabase(setupToken);
       toast.success('Database schema and core roles initialized');
       setMigrationPassed(true);
       setMigrationLogs(res.data?.output || 'Migrations finished successfully.');
@@ -154,7 +155,7 @@ export default function WebInstallerPage() {
         email: adminEmail,
         password: adminPassword,
         password_confirmation: adminPasswordConfirm,
-      });
+      }, setupToken);
       toast.success('Super Admin account created and application locked!');
       setCurrentStep(7);
     } catch (err: unknown) {
@@ -227,6 +228,21 @@ export default function WebInstallerPage() {
                   This automated setup assistant will verify your server dependencies, test your database
                   connection, configure application keys, and initialize the first Super Admin account.
                 </p>
+              </div>
+
+              <div className="max-w-md mx-auto text-left pt-2">
+                <FormField
+                  label="Setup Authorization Token"
+                  hint="If required by your server, enter the token generated via php artisan app:generate-installer-token"
+                >
+                  <Input
+                    type="password"
+                    placeholder="Enter setup token (optional in local dev)"
+                    value={setupToken}
+                    onChange={(e) => setSetupToken(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </FormField>
               </div>
 
               <div className="pt-4">

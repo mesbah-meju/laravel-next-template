@@ -35,6 +35,7 @@ class InstallerController extends Controller
         $this->ensureNotInstalled();
 
         $requirements = InstallerService::checkServerRequirements();
+
         return $this->successResponse($requirements, 'Server requirements evaluated.');
     }
 
@@ -43,7 +44,7 @@ class InstallerController extends Controller
      */
     public function testDatabase(Request $request): JsonResponse
     {
-        $this->ensureNotInstalled();
+        $this->ensureValidSetupToken($request);
 
         $validated = $request->validate([
             'db_connection' => ['required', 'in:mysql,sqlite,pgsql'],
@@ -56,7 +57,7 @@ class InstallerController extends Controller
 
         $result = InstallerService::testDatabaseConnection($validated);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return $this->errorResponse($result['message'], null, 422);
         }
 
@@ -68,7 +69,7 @@ class InstallerController extends Controller
      */
     public function saveEnvironment(Request $request): JsonResponse
     {
-        $this->ensureNotInstalled();
+        $this->ensureValidSetupToken($request);
 
         $validated = $request->validate([
             'app_name' => ['required', 'string', 'max:100'],
@@ -108,13 +109,13 @@ class InstallerController extends Controller
     /**
      * Step 6: Run database migrations & seed initial permissions.
      */
-    public function setupDatabase(): JsonResponse
+    public function setupDatabase(Request $request): JsonResponse
     {
-        $this->ensureNotInstalled();
+        $this->ensureValidSetupToken($request);
 
         $result = InstallerService::runDatabaseSetup();
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return $this->errorResponse($result['message'], null, 500);
         }
 
@@ -126,7 +127,7 @@ class InstallerController extends Controller
      */
     public function createAdmin(Request $request): JsonResponse
     {
-        $this->ensureNotInstalled();
+        $this->ensureValidSetupToken($request);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -156,6 +157,20 @@ class InstallerController extends Controller
     {
         if (InstallerService::isInstalled()) {
             abort(403, 'Application is already installed. Access to the installer is locked.');
+        }
+
+        if (app()->isProduction() && ! config('app.installer_unlocked', false)) {
+            abort(403, 'The web installer is disabled in production environments. Please use CLI provisioning.');
+        }
+    }
+
+    private function ensureValidSetupToken(Request $request): void
+    {
+        $this->ensureNotInstalled();
+
+        $token = $request->header('X-Installer-Token') ?? $request->input('setup_token');
+        if (! InstallerService::validateSetupToken($token)) {
+            abort(403, 'Unauthorized installer access: valid one-time setup token required.');
         }
     }
 }

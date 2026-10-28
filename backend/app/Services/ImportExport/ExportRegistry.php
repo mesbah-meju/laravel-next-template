@@ -2,7 +2,9 @@
 
 namespace App\Services\ImportExport;
 
-use Closure;
+use App\Models\ActivityLog;
+use App\Models\LoginHistory;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
 class ExportRegistry
@@ -12,7 +14,7 @@ class ExportRegistry
     /**
      * Register an exportable definition.
      *
-     * @param string $key e.g. 'users'
+     * @param  string  $key  e.g. 'users'
      * @param array{
      *     label: string,
      *     permission?: string,
@@ -41,6 +43,7 @@ class ExportRegistry
     public static function all(): array
     {
         self::ensureDefaults();
+
         return self::$definitions;
     }
 
@@ -50,6 +53,7 @@ class ExportRegistry
     public static function get(string $key): ?array
     {
         self::ensureDefaults();
+
         return self::$definitions[$key] ?? null;
     }
 
@@ -58,7 +62,7 @@ class ExportRegistry
      */
     protected static function ensureDefaults(): void
     {
-        if (!isset(self::$definitions['users'])) {
+        if (! isset(self::$definitions['users'])) {
             self::register('users', [
                 'label' => 'Users',
                 'permission' => 'manage-users',
@@ -67,36 +71,36 @@ class ExportRegistry
                     ['key' => 'name', 'label' => 'Name'],
                     ['key' => 'email', 'label' => 'Email'],
                     ['key' => 'status', 'label' => 'Status'],
-                    ['key' => 'created_at', 'label' => 'Created Date', 'format' => fn($u) => $u->created_at?->toIso8601String()],
+                    ['key' => 'created_at', 'label' => 'Created Date', 'format' => fn ($u) => $u->created_at?->toIso8601String()],
                 ],
-                'query' => fn() => \App\Models\User::query(),
+                'query' => fn () => User::query(),
             ]);
         }
 
-        if (!isset(self::$definitions['activity_logs'])) {
+        if (! isset(self::$definitions['activity_logs'])) {
             self::register('activity_logs', [
                 'label' => 'Activity Logs',
                 'permission' => 'view-activity-logs',
                 'columns' => [
                     ['key' => 'id', 'label' => 'ID'],
-                    ['key' => 'user', 'label' => 'User', 'format' => fn($log) => $log->user?->name ?? 'System'],
+                    ['key' => 'user', 'label' => 'User', 'format' => fn ($log) => $log->user?->name ?? 'System'],
                     ['key' => 'action', 'label' => 'Action'],
                     ['key' => 'module', 'label' => 'Module'],
                     ['key' => 'description', 'label' => 'Description'],
                     ['key' => 'ip_address', 'label' => 'IP Address'],
-                    ['key' => 'created_at', 'label' => 'Timestamp', 'format' => fn($log) => $log->created_at?->toIso8601String()],
+                    ['key' => 'created_at', 'label' => 'Timestamp', 'format' => fn ($log) => $log->created_at?->toIso8601String()],
                 ],
-                'query' => fn() => \App\Models\ActivityLog::with('user:id,name'),
+                'query' => fn () => ActivityLog::with('user:id,name'),
             ]);
         }
 
-        if (!isset(self::$definitions['login_histories'])) {
+        if (! isset(self::$definitions['login_histories'])) {
             self::register('login_histories', [
                 'label' => 'Login History',
                 'permission' => 'view-login-history',
                 'columns' => [
                     ['key' => 'id', 'label' => 'ID'],
-                    ['key' => 'user', 'label' => 'User', 'format' => fn($h) => $h->user?->name ?? ($h->email ?? 'Guest')],
+                    ['key' => 'user', 'label' => 'User', 'format' => fn ($h) => $h->user?->name ?? ($h->email ?? 'Guest')],
                     ['key' => 'email', 'label' => 'Attempted Email'],
                     ['key' => 'ip_address', 'label' => 'IP Address'],
                     ['key' => 'browser', 'label' => 'Browser'],
@@ -104,9 +108,9 @@ class ExportRegistry
                     ['key' => 'device_type', 'label' => 'Device Type'],
                     ['key' => 'status', 'label' => 'Status'],
                     ['key' => 'failure_reason', 'label' => 'Failure Reason'],
-                    ['key' => 'login_at', 'label' => 'Login Timestamp', 'format' => fn($h) => $h->login_at?->toIso8601String()],
+                    ['key' => 'login_at', 'label' => 'Login Timestamp', 'format' => fn ($h) => $h->login_at?->toIso8601String()],
                 ],
-                'query' => fn() => \App\Models\LoginHistory::with('user:id,name'),
+                'query' => fn () => LoginHistory::with('user:id,name'),
             ]);
         }
     }

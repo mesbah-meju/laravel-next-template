@@ -19,6 +19,7 @@ class RedirectController extends Controller
     public function index(Request $request): JsonResponse
     {
         $redirects = Redirect::latest()->paginate($request->input('per_page', 20));
+
         return $this->paginatedResponse($redirects, 'Redirects retrieved.');
     }
 
@@ -87,12 +88,12 @@ class RedirectController extends Controller
      */
     public function resolve(Request $request): JsonResponse
     {
-        $path = '/' . ltrim($request->input('path', ''), '/');
+        $path = '/'.ltrim($request->input('path', ''), '/');
 
         $redirect = Redirect::where('is_active', true)
             ->where(function ($q) use ($path) {
                 $q->where('source_path', $path)
-                  ->orWhere('source_path', rtrim($path, '/'));
+                    ->orWhere('source_path', rtrim($path, '/'));
             })
             ->first();
 

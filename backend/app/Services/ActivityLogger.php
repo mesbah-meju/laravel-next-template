@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\ActivityLog;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
 
@@ -77,6 +76,7 @@ class ActivityLogger
                 $sanitized[$key] = $value;
             }
         }
+
         return $sanitized;
     }
 
@@ -91,6 +91,7 @@ class ActivityLogger
                 return true;
             }
         }
+
         return false;
     }
 }

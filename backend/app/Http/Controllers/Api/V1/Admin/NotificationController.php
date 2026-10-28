@@ -17,7 +17,7 @@ class NotificationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return $this->errorResponse('Unauthenticated', null, 401);
         }
 
@@ -72,7 +72,7 @@ class NotificationController extends Controller
         $user = $request->user();
         $notification = $user->notifications()->where('id', $id)->first();
 
-        if (!$notification) {
+        if (! $notification) {
             return $this->errorResponse('Notification not found.', null, 404);
         }
 
@@ -104,7 +104,7 @@ class NotificationController extends Controller
         $user = $request->user();
         $notification = $user->notifications()->where('id', $id)->first();
 
-        if (!$notification) {
+        if (! $notification) {
             return $this->errorResponse('Notification not found.', null, 404);
         }
 

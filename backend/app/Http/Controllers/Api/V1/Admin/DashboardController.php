@@ -6,11 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Media;
 use App\Models\Menu;
 use App\Models\User;
+use App\Support\ModuleRegistry;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Spatie\Permission\Models\Role;
-
-use App\Support\ModuleRegistry;
 
 class DashboardController extends Controller
 {
@@ -53,4 +52,3 @@ class DashboardController extends Controller
         ], 'Dashboard statistics retrieved successfully.');
     }
 }
-

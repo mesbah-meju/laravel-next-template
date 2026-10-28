@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Api\V1;
 
-use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class BulkActionTest extends TestCase
@@ -19,7 +19,7 @@ class BulkActionTest extends TestCase
     {
         parent::setUp();
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $role = Role::create(['name' => 'Super Admin', 'guard_name' => 'web']);
         Permission::create(['name' => 'manage-users', 'guard_name' => 'web']);

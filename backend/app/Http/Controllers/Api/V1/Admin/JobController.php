@@ -29,8 +29,8 @@ class JobController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('queue', 'like', "%{$search}%")
-                  ->orWhere('payload', 'like', "%{$search}%")
-                  ->orWhere('exception', 'like', "%{$search}%");
+                    ->orWhere('payload', 'like', "%{$search}%")
+                    ->orWhere('exception', 'like', "%{$search}%");
             });
         }
 
@@ -88,7 +88,7 @@ class JobController extends Controller
     {
         $job = DB::table('failed_jobs')->where('id', $id)->first();
 
-        if (!$job) {
+        if (! $job) {
             return $this->errorResponse('Failed job record not found.', null, 404);
         }
 
@@ -123,7 +123,7 @@ class JobController extends Controller
 
             return $this->successResponse(null, $output ?: "Job #{$id} queued for retry.");
         } catch (Throwable $e) {
-            return $this->errorResponse('Retry failed: ' . $e->getMessage(), null, 500);
+            return $this->errorResponse('Retry failed: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -144,7 +144,7 @@ class JobController extends Controller
 
             return $this->successResponse(null, $output ?: 'All failed jobs have been queued for retry.');
         } catch (Throwable $e) {
-            return $this->errorResponse('Retry all failed: ' . $e->getMessage(), null, 500);
+            return $this->errorResponse('Retry all failed: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -164,7 +164,7 @@ class JobController extends Controller
 
             return $this->successResponse(null, "Failed job #{$id} deleted successfully.");
         } catch (Throwable $e) {
-            return $this->errorResponse('Deletion failed: ' . $e->getMessage(), null, 500);
+            return $this->errorResponse('Deletion failed: '.$e->getMessage(), null, 500);
         }
     }
 
@@ -184,7 +184,7 @@ class JobController extends Controller
 
             return $this->successResponse(null, 'All failed jobs have been purged.');
         } catch (Throwable $e) {
-            return $this->errorResponse('Flush failed: ' . $e->getMessage(), null, 500);
+            return $this->errorResponse('Flush failed: '.$e->getMessage(), null, 500);
         }
     }
 }

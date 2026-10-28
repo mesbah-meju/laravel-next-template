@@ -101,14 +101,15 @@ class SystemNoticeController extends Controller
             if (empty($notice->target_roles)) {
                 return true;
             }
-            if (!$user) {
+            if (! $user) {
                 return in_array('public', $notice->target_roles);
             }
             if ($user->hasRole('Super Admin')) {
                 return true;
             }
             $userRoles = $user->roles->pluck('name')->toArray();
-            return !empty(array_intersect($userRoles, $notice->target_roles));
+
+            return ! empty(array_intersect($userRoles, $notice->target_roles));
         })->values();
 
         return $this->successResponse($notices, 'Active system notices retrieved.');

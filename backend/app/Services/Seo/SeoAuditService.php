@@ -16,9 +16,9 @@ class SeoAuditService
 
         $isIndexingEnabled = ($settings['seo_indexing_enabled'] ?? '1') === '1';
         $canonicalBase = $settings['seo_canonical_base_url'] ?? config('app.url');
-        $hasTitle = !empty($settings['seo_default_title'] ?? $settings['site_name'] ?? null);
-        $hasDescription = !empty($settings['seo_default_description'] ?? $settings['site_description'] ?? null);
-        $hasOgImage = !empty($settings['seo_default_og_image'] ?? null);
+        $hasTitle = ! empty($settings['seo_default_title'] ?? $settings['site_name'] ?? null);
+        $hasDescription = ! empty($settings['seo_default_description'] ?? $settings['site_description'] ?? null);
+        $hasOgImage = ! empty($settings['seo_default_og_image'] ?? null);
 
         $checks = [
             [
@@ -32,7 +32,7 @@ class SeoAuditService
             ],
             [
                 'name' => 'Canonical Base URL',
-                'status' => !empty($canonicalBase) && filter_var($canonicalBase, FILTER_VALIDATE_URL) ? 'passed' : 'warning',
+                'status' => ! empty($canonicalBase) && filter_var($canonicalBase, FILTER_VALIDATE_URL) ? 'passed' : 'warning',
                 'message' => $canonicalBase ? "Configured as {$canonicalBase}" : 'No canonical base URL set.',
             ],
             [

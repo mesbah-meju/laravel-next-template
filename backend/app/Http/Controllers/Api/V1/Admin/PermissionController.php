@@ -28,12 +28,12 @@ class PermissionController extends Controller
                 'name' => $perm->name,
                 'guard_name' => $perm->guard_name,
                 'created_at' => $perm->created_at,
-                'roles' => $perm->roles->map(fn($r) => ['id' => $r->id, 'name' => $r->name]),
+                'roles' => $perm->roles->map(fn ($r) => ['id' => $r->id, 'name' => $r->name]),
             ];
         }
 
         return $this->successResponse([
-            'all' => $permissions->map(fn($p) => ['id' => $p->id, 'name' => $p->name]),
+            'all' => $permissions->map(fn ($p) => ['id' => $p->id, 'name' => $p->name]),
             'grouped' => $grouped,
         ], 'Permissions retrieved successfully.');
     }
@@ -64,10 +64,37 @@ class PermissionController extends Controller
             'manage-permissions',
             'manage-menus',
             'manage-settings',
+            'manage-security-settings',
             'manage-media',
+            'view-activity-logs',
+            'manage-activity-logs',
+            'view-notifications',
+            'view-system-health',
+            'view-failed-jobs',
+            'manage-failed-jobs',
+            'view-login-history',
+            'manage-sessions',
+            'manage-imports',
+            'manage-exports',
+            'impersonate-users',
+            'view-system-notices',
+            'manage-system-notices',
+            'view-email-templates',
+            'manage-email-templates',
+            'view-notification-templates',
+            'manage-notification-templates',
+            'manage-cache',
+            'view-backups',
+            'create-backups',
+            'download-backups',
+            'delete-backups',
+            'view-error-logs',
+            'manage-error-logs',
+            'view-system-updates',
+            'manage-system-updates',
         ];
 
-        if (in_array($permission->name, $corePermissions)) {
+        if (in_array($permission->name, $corePermissions, true)) {
             return $this->errorResponse('Core system permission cannot be deleted.', null, 403);
         }
 
@@ -81,13 +108,28 @@ class PermissionController extends Controller
      */
     private function determineGroup(string $name): string
     {
-        if (str_contains($name, 'user')) return 'Users';
-        if (str_contains($name, 'role')) return 'Roles';
-        if (str_contains($name, 'permission')) return 'Permissions';
-        if (str_contains($name, 'menu')) return 'Menus';
-        if (str_contains($name, 'media')) return 'Media';
-        if (str_contains($name, 'setting')) return 'Settings';
-        if (str_contains($name, 'dashboard')) return 'Dashboard';
+        if (str_contains($name, 'user')) {
+            return 'Users';
+        }
+        if (str_contains($name, 'role')) {
+            return 'Roles';
+        }
+        if (str_contains($name, 'permission')) {
+            return 'Permissions';
+        }
+        if (str_contains($name, 'menu')) {
+            return 'Menus';
+        }
+        if (str_contains($name, 'media')) {
+            return 'Media';
+        }
+        if (str_contains($name, 'setting')) {
+            return 'Settings';
+        }
+        if (str_contains($name, 'dashboard')) {
+            return 'Dashboard';
+        }
+
         return 'General';
     }
 }

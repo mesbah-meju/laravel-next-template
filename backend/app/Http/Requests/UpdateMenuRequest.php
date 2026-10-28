@@ -13,6 +13,6 @@ class UpdateMenuRequest extends FormRequest
 
     public function rules()
     {
-        return (new StoreMenuRequest())->rules();
+        return (new StoreMenuRequest)->rules();
     }
 }
