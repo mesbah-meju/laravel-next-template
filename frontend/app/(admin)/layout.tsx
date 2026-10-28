@@ -26,6 +26,7 @@ import {
   Laptop,
   Cpu,
   FileSpreadsheet,
+  Mail,
   MailCheck,
   BellRing,
   FileText,
@@ -37,6 +38,8 @@ import {
   Search,
   PanelLeft,
   Globe,
+  BarChart3,
+  Construction,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
@@ -141,6 +144,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           icon: MessageSquare,
           children: [
             { label: 'Notifications', href: '/admin/notifications', icon: Bell, permission: 'view-notifications' },
+            { label: 'Email Settings', href: '/admin/communication/email-settings', icon: Mail, permission: 'manage-settings' },
             { label: 'Email Templates', href: '/admin/communication/email-templates', icon: MailCheck, permission: 'view-email-templates' },
             { label: 'Notification Templates', href: '/admin/communication/notification-templates', icon: BellRing, permission: 'view-notification-templates' },
             { label: 'System Notices', href: '/admin/communication/system-notices', icon: BellRing, permission: 'view-system-notices' },
@@ -152,9 +156,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           children: [
             { label: 'Site Settings', href: '/admin/settings', icon: Settings, permission: 'manage-settings' },
             { label: 'URL Redirects', href: '/admin/settings/redirects', icon: GitCompare, permission: 'manage-settings' },
+            { label: 'Maintenance Mode', href: '/admin/system/maintenance', icon: Construction, permission: 'manage-settings' },
             { label: 'Activity Logs', href: '/admin/activity-logs', icon: Activity, permission: 'view-activity-logs' },
             { label: 'Background Jobs', href: '/admin/system/jobs', icon: Layers, permission: 'view-failed-jobs' },
             { label: 'System Health', href: '/admin/system/health', icon: Cpu, permission: 'view-system-health' },
+            { label: 'Traffic', href: '/admin/system/traffic', icon: BarChart3, permission: 'view-traffic' },
             { label: 'Error Logs', href: '/admin/system/logs', icon: FileText, permission: 'view-error-logs' },
             { label: 'Cache Management', href: '/admin/system/cache', icon: RefreshCw, permission: 'manage-cache' },
             { label: 'Database Backups', href: '/admin/system/backups', icon: Archive, permission: 'view-backups' },
@@ -277,7 +283,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (isLoading || !isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0e2672]">
+      <div className="flex min-h-screen items-center justify-center bg-[#0B1F5C]">
         <div className="text-center space-y-3">
           <div className="w-10 h-10 border-3 border-white border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-xs text-blue-100 font-medium">Verifying authorization...</p>
@@ -309,7 +315,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Royal Navy Blue Modern Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 bg-[#0e2672] dark:bg-[#09194d] text-white flex flex-col transition-all duration-200 ease-in-out md:static md:h-screen md:sticky md:top-0 shadow-lg',
+          'fixed inset-y-0 left-0 z-50 flex flex-col bg-[#0B1F5C] text-white shadow-lg transition-all duration-200 ease-in-out dark:bg-[#07133A] md:static md:sticky md:top-0 md:h-screen',
           sidebarOpen ? 'translate-x-0 w-60' : '-translate-x-full md:translate-x-0',
           isCollapsed ? 'md:w-20' : 'md:w-60'
         )}
@@ -698,10 +704,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <SystemNoticeBanner />
 
         {/* Page Content Container */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">{children}</main>
+        <main className="flex-1 w-full p-4 sm:p-6 lg:p-8">{children}</main>
 
         {/* Admin Footer */}
-        <footer className="px-4 sm:px-6 lg:px-8 py-4 border-t border-gray-200/80 dark:border-gray-800/80 text-xs text-gray-500 dark:text-gray-400 flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl w-full mx-auto">
+        <footer className="w-full px-4 sm:px-6 lg:px-8 py-4 border-t border-gray-200/80 dark:border-gray-800/80 text-xs text-gray-500 dark:text-gray-400 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>© {new Date().getFullYear()} {siteName}. All rights reserved.</p>
           <p className="flex items-center gap-1.5 text-xs">
             <span>Developed by</span>

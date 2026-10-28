@@ -2,6 +2,43 @@ export interface PreflightCheck {
   label: string;
   passed: boolean;
   details: string;
+  informative?: boolean;
+}
+
+export interface PendingMigration {
+  name: string;
+}
+
+export interface PendingPermissions {
+  missing: string[];
+  role_sync_needed: boolean;
+  missing_roles: string[];
+}
+
+export interface PendingSettings {
+  missing_keys: string[];
+}
+
+export interface PendingSeeder {
+  id: string;
+  class: string;
+  reason: string;
+}
+
+export interface PendingUpdates {
+  has_updates: boolean;
+  migrations: PendingMigration[];
+  permissions: PendingPermissions;
+  settings: PendingSettings;
+  seeders: PendingSeeder[];
+  summary: string;
+  changelog: string[];
+  counts: {
+    migrations: number;
+    permissions: number;
+    settings: number;
+    seeders: number;
+  };
 }
 
 export interface AvailableUpdate {
@@ -12,13 +49,18 @@ export interface AvailableUpdate {
   summary: string;
   changelog: string[];
   is_update_available: boolean;
+  source?: 'local-detection' | 'manifest' | string;
+  pending?: PendingUpdates;
 }
 
 export interface UpdateStatusResponse {
   current_version: string;
+  pending: PendingUpdates;
   available_update: AvailableUpdate | null;
   preflight: {
     ready: boolean;
+    environment_ready?: boolean;
+    has_pending_work?: boolean;
     checks: PreflightCheck[];
   };
 }
@@ -41,3 +83,5 @@ export interface SystemUpdateHistory {
   completed_at: string | null;
   created_at: string;
 }
+
+export type UpdateComponent = 'migrations' | 'permissions' | 'settings';

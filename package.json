@@ -2,7 +2,7 @@
   "name": "laravel-next-starter",
   "version": "1.0.0",
   "private": true,
-  "description": "Unified Laravel 12 API + Next.js App Router Starter Template",
+  "description": "Laravel 12 API + Next.js 16 App Router starter template",
   "scripts": {
     "dev:backend": "cd backend && php artisan serve",
     "dev:frontend": "cd frontend && npm run dev",

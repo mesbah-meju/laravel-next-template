@@ -20,7 +20,7 @@ class BackupController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $this->authorizePermission('view-backups');
+        authorize_permission('view-backups');
 
         $backups = Backup::with('creator:id,name,email')
             ->latest()
@@ -38,7 +38,7 @@ class BackupController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $this->authorizePermission('create-backups');
+        authorize_permission('create-backups');
 
         try {
             $backup = BackupService::createBackup($request->user()?->id);
@@ -54,7 +54,7 @@ class BackupController extends Controller
      */
     public function download(Backup $backup): BinaryFileResponse
     {
-        $this->authorizePermission('download-backups');
+        authorize_permission('download-backups');
 
         return BackupService::download($backup);
     }
@@ -64,18 +64,10 @@ class BackupController extends Controller
      */
     public function destroy(Backup $backup): JsonResponse
     {
-        $this->authorizePermission('delete-backups');
+        authorize_permission('delete-backups');
 
         BackupService::delete($backup);
 
         return $this->successResponse(null, 'Backup deleted successfully.');
-    }
-
-    private function authorizePermission(string $permission): void
-    {
-        $user = auth()->user();
-        if (! $user || (! $user->can($permission) && ! $user->hasRole('Super Admin'))) {
-            abort(403, "Unauthorized. Action requires {$permission} permission.");
-        }
     }
 }

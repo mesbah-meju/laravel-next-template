@@ -18,7 +18,7 @@ class LogViewerController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $this->authorizePermission('view-error-logs');
+        authorize_permission('view-error-logs');
 
         $filename = $request->input('file');
         $severity = $request->input('severity');
@@ -46,7 +46,7 @@ class LogViewerController extends Controller
      */
     public function download(Request $request): BinaryFileResponse
     {
-        $this->authorizePermission('view-error-logs');
+        authorize_permission('view-error-logs');
 
         $filename = $request->input('file');
 
@@ -58,19 +58,11 @@ class LogViewerController extends Controller
      */
     public function clear(Request $request): JsonResponse
     {
-        $this->authorizePermission('manage-error-logs');
+        authorize_permission('manage-error-logs');
 
         $filename = $request->input('file');
         LogViewerService::clearLogFile($filename);
 
         return $this->successResponse(null, 'Log file cleared successfully.');
-    }
-
-    private function authorizePermission(string $permission): void
-    {
-        $user = auth()->user();
-        if (! $user || (! $user->can($permission) && ! $user->hasRole('Super Admin'))) {
-            abort(403, "Unauthorized. Action requires {$permission} permission.");
-        }
     }
 }

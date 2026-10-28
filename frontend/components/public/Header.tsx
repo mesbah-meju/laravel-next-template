@@ -2,9 +2,11 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Menu as MenuIcon, X, Layers } from 'lucide-react';
+import { Menu as MenuIcon, X } from 'lucide-react';
 import { DynamicNav } from './DynamicNav';
+import { SiteBrand } from './SiteBrand';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { Button } from '@/components/ui/Button';
 import { MenuItem } from '@/types/menu';
 import { SiteSettings } from '@/types/setting';
 
@@ -16,43 +18,43 @@ export interface HeaderProps {
 export function Header({ navItems, settings }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const siteName = settings.site_name || 'Laravel Next Starter';
+  const siteName = settings.site_name || 'NextLaravel';
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        {/* Brand */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
-            <Layers className="w-4 h-4" />
-          </div>
-          <span className="font-bold text-base tracking-tight text-gray-900 dark:text-gray-100">{siteName}</span>
-        </Link>
+    <header className="sticky top-0 z-40 w-full border-b border-border/80 bg-background/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <SiteBrand name={siteName} logo={settings.site_logo} />
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden md:block">
           <DynamicNav items={navItems} />
         </div>
 
-        {/* Action / Theme Toggle */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
-
-          {/* Mobile Menu Button */}
+          <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
+            <Link href="/admin-login">Admin</Link>
+          </Button>
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            type="button"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground md:hidden"
             aria-label="Toggle navigation"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <MenuIcon className="w-5 h-5" />}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-5 shadow-lg">
+        <div className="border-t border-border bg-background px-4 py-5 md:hidden">
           <DynamicNav items={navItems} isMobile />
+          <div className="mt-4 border-t border-border pt-4">
+            <Button asChild className="w-full" size="sm">
+              <Link href="/admin-login" onClick={() => setMobileMenuOpen(false)}>
+                Admin login
+              </Link>
+            </Button>
+          </div>
         </div>
       )}
     </header>

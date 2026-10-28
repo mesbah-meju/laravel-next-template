@@ -30,11 +30,11 @@ export function UnauthorizedState({
           </div>
         )}
         <div className="pt-2">
-          <Link href="/admin">
-            <Button variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin">
               <ArrowLeft className="w-4 h-4 mr-1.5" /> Return to Dashboard
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
     </div>

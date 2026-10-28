@@ -1,4 +1,6 @@
 export * from './Button';
+export * from './DataTable';
+export * from './DataTableFilters';
 export * from './SubmitButton';
 export * from './FormField';
 export * from './FormSection';

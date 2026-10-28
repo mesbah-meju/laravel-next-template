@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Select } from '@/components/ui/Select';
 import { FormField } from '@/components/ui/FormField';
 import { SubmitButton } from '@/components/ui/SubmitButton';
@@ -193,9 +194,9 @@ export default function WebInstallerPage() {
             from your terminal.
           </p>
           <div className="pt-2">
-            <Link href="/admin-login">
-              <Button className="w-full">Proceed to Admin Login</Button>
-            </Link>
+            <Button asChild className="w-full">
+              <Link href="/admin-login">Proceed to Admin Login</Link>
+            </Button>
           </div>
         </div>
       </div>
@@ -602,26 +603,23 @@ export default function WebInstallerPage() {
                 />
               </FormField>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FormField label="Password" required>
-                  <Input
-                    type="password"
-                    value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
-                    required
-                    minLength={8}
-                  />
-                </FormField>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <PasswordInput
+                  label="Password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  showRequirements
+                />
 
-                <FormField label="Confirm Password" required>
-                  <Input
-                    type="password"
-                    value={adminPasswordConfirm}
-                    onChange={(e) => setAdminPasswordConfirm(e.target.value)}
-                    required
-                    minLength={8}
-                  />
-                </FormField>
+                <PasswordInput
+                  label="Confirm password"
+                  value={adminPasswordConfirm}
+                  onChange={(e) => setAdminPasswordConfirm(e.target.value)}
+                  required
+                  minLength={8}
+                />
               </div>
 
               <div className="pt-4 border-t border-border flex justify-end">
@@ -645,9 +643,9 @@ export default function WebInstallerPage() {
               </div>
 
               <div className="pt-4">
-                <Link href="/admin-login">
-                  <Button className="w-full sm:w-auto px-8">Go to Admin Login</Button>
-                </Link>
+                <Button asChild className="w-full px-8 sm:w-auto">
+                  <Link href="/admin-login">Go to Admin Login</Link>
+                </Button>
               </div>
             </div>
           )}

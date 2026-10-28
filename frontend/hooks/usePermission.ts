@@ -13,8 +13,22 @@ export function usePermission() {
     ? user.permissions.map((p) => (typeof p === 'string' ? p : p.name))
     : [];
 
+  const can = (permission: string) => hasPermission(permission);
+
+  /** Permission check that always allows Super Admin. Supports `a|b` OR syntax. */
+  const canManage = (permission: string) => {
+    if (isSuperAdmin()) return true;
+
+    return permission
+      .split('|')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .some((part) => hasPermission(part));
+  };
+
   return {
-    can: hasPermission,
+    can,
+    canManage,
     hasRole,
     isSuperAdmin,
     roles: userRoles,

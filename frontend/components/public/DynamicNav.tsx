@@ -18,7 +18,7 @@ export function DynamicNav({ items, className, isMobile = false }: DynamicNavPro
 
   return (
     <nav className={className}>
-      <ul className={isMobile ? 'flex flex-col space-y-2' : 'flex items-center gap-1'}>
+      <ul className={isMobile ? 'flex flex-col space-y-1' : 'flex items-center gap-1'}>
         {items.map((item, idx) => {
           const hasChildren = item.children && item.children.length > 0;
           const itemId = item.id ?? idx;
@@ -28,30 +28,34 @@ export function DynamicNav({ items, className, isMobile = false }: DynamicNavPro
             return (
               <li key={itemId} className="relative group">
                 <button
+                  type="button"
                   onClick={() => setOpenDropdown(isOpen ? null : itemId)}
-                  className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition cursor-pointer"
+                  className="flex cursor-pointer items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-foreground/80 transition hover:bg-muted hover:text-primary"
                 >
                   {item.title}
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Dropdown Menu */}
                 <div
-                  className={`
-                    ${isMobile ? (isOpen ? 'block pl-4 mt-1 space-y-1' : 'hidden') : 'absolute left-0 top-full pt-1.5 w-48 hidden group-hover:block z-50'}
-                  `}
+                  className={
+                    isMobile
+                      ? isOpen
+                        ? 'mt-1 block space-y-1 pl-4'
+                        : 'hidden'
+                      : 'absolute top-full left-0 z-50 hidden w-48 pt-1.5 group-hover:block'
+                  }
                 >
-                  <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg p-1.5 space-y-0.5">
+                  <div className="space-y-0.5 rounded-xl border border-border bg-card p-1.5 shadow-lg">
                     {item.children?.map((child, cIdx) => (
                       <Link
                         key={child.id ?? cIdx}
                         href={child.url || child.raw_url || '#'}
                         target={child.new_tab ? '_blank' : undefined}
                         rel={child.new_tab ? 'noopener noreferrer' : undefined}
-                        className="flex items-center justify-between px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition"
+                        className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-foreground/80 transition hover:bg-muted hover:text-primary"
                       >
                         {child.title}
-                        {child.new_tab && <ExternalLink className="w-3 h-3 text-gray-400" />}
+                        {child.new_tab && <ExternalLink className="h-3 w-3 text-muted-foreground" />}
                       </Link>
                     ))}
                   </div>
@@ -66,10 +70,10 @@ export function DynamicNav({ items, className, isMobile = false }: DynamicNavPro
                 href={item.url || item.raw_url || '#'}
                 target={item.new_tab ? '_blank' : undefined}
                 rel={item.new_tab ? 'noopener noreferrer' : undefined}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground/80 transition hover:bg-muted hover:text-primary"
               >
                 {item.title}
-                {item.new_tab && <ExternalLink className="w-3 h-3 text-gray-400" />}
+                {item.new_tab && <ExternalLink className="h-3 w-3 text-muted-foreground" />}
               </Link>
             </li>
           );

@@ -1,13 +1,16 @@
 import { MetadataRoute } from 'next';
-import { getPublicSeoSettings } from '@/lib/seo';
+import { getSiteUrl, isIndexingAllowedByEnv } from '@/lib/env';
+import { getPublicSeoSettings, isSeoFlagEnabled } from '@/lib/seo';
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const settings = await getPublicSeoSettings();
-  const siteUrl = settings.seo_canonical_base_url || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const isIndexingDisabled = settings.seo_indexing_enabled === '0' || settings.seo_indexing_enabled === false;
-  const isDev = process.env.NODE_ENV !== 'production';
+  const siteUrl = (settings.seo_canonical_base_url || getSiteUrl()).replace(/\/$/, '');
+  const indexingEnabled =
+    isSeoFlagEnabled(settings.seo_indexing_enabled, true) &&
+    isIndexingAllowedByEnv() &&
+    !isSeoFlagEnabled(settings.maintenance_mode, false);
 
-  if (isIndexingDisabled || isDev) {
+  if (!indexingEnabled) {
     return {
       rules: [
         {
@@ -26,12 +29,15 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         allow: '/',
         disallow: [
           '/admin',
-          '/admin/*',
+          '/admin/',
           '/admin-login',
+          '/login',
           '/forgot-password',
           '/reset-password',
-          '/api/*',
-          '/_next/*',
+          '/install',
+          '/install/',
+          '/api/',
+          '/sanctum/',
         ],
       },
     ],

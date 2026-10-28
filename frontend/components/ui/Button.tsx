@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Slot } from '@radix-ui/react-slot';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +11,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  asChild?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -21,6 +23,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       isLoading = false,
       leftIcon,
       rightIcon,
+      asChild = false,
       children,
       disabled,
       ...props
@@ -28,28 +31,26 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 disabled:pointer-events-none disabled:opacity-50 cursor-pointer select-none';
+      'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50 cursor-pointer select-none';
 
-    // Normalize variant mappings
     const normalizedVariant =
       variant === 'default' ? 'primary' : variant === 'destructive' ? 'danger' : variant;
 
     const variants = {
       primary:
-        'bg-indigo-600 text-white shadow-2xs hover:bg-indigo-700 active:bg-indigo-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 focus-visible:ring-indigo-500',
+        'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:bg-primary/80',
       secondary:
-        'bg-gray-100 text-gray-900 shadow-2xs hover:bg-gray-200/80 dark:bg-gray-800 dark:text-gray-50 dark:hover:bg-gray-700 focus-visible:ring-gray-400',
+        'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
       outline:
-        'border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-2xs hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-50 text-gray-700 dark:text-gray-200 focus-visible:ring-indigo-500',
+        'border border-border bg-card text-foreground shadow-sm hover:bg-muted',
       danger:
-        'bg-rose-600 text-white shadow-2xs hover:bg-rose-700 active:bg-rose-800 dark:bg-rose-600 dark:hover:bg-rose-500 focus-visible:ring-rose-500',
+        'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
       ghost:
-        'hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-850 dark:hover:text-gray-50 text-gray-600 dark:text-gray-300 focus-visible:ring-gray-400',
+        'text-muted-foreground hover:bg-muted hover:text-foreground',
       link:
-        'text-indigo-600 dark:text-indigo-400 underline-offset-4 hover:underline p-0 h-auto font-normal',
+        'text-primary underline-offset-4 hover:underline p-0 h-auto font-normal',
     };
 
-    // Normalize size mappings
     const normalizedSize = size === 'default' ? 'md' : size;
 
     const sizes = {
@@ -59,15 +60,30 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       icon: 'h-9 w-9 p-0',
     };
 
+    const Comp = asChild ? Slot : 'button';
+    const isDisabled = disabled || isLoading;
+
+    if (asChild) {
+      return (
+        <Comp
+          className={cn(baseStyles, variants[normalizedVariant], sizes[normalizedSize], className)}
+          ref={ref}
+          {...props}
+        >
+          {children}
+        </Comp>
+      );
+    }
+
     return (
       <button
         ref={ref}
-        disabled={disabled || isLoading}
+        disabled={isDisabled}
         className={cn(baseStyles, variants[normalizedVariant], sizes[normalizedSize], className)}
         {...props}
       >
         {isLoading ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
         ) : (
           leftIcon && <span className="shrink-0">{leftIcon}</span>
         )}

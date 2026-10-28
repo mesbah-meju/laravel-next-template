@@ -49,7 +49,7 @@ class SystemUpdateTest extends TestCase
         $res->assertStatus(403);
     }
 
-    public function test_admin_can_check_update_status_and_preflight(): void
+    public function test_admin_can_check_update_status_and_pending_detection(): void
     {
         $response = $this->actingAs($this->admin, 'sanctum')
             ->getJson('/api/v1/admin/system/updates/status');
@@ -59,30 +59,51 @@ class SystemUpdateTest extends TestCase
             'success',
             'data' => [
                 'current_version',
+                'pending' => [
+                    'has_updates',
+                    'migrations',
+                    'permissions',
+                    'settings',
+                    'seeders',
+                    'summary',
+                    'counts',
+                ],
                 'available_update',
                 'preflight' => [
                     'ready',
+                    'environment_ready',
+                    'has_pending_work',
                     'checks',
                 ],
             ],
         ]);
+
+        // Fresh DB without full seeders should report pending permission/setting work.
+        $this->assertTrue($response->json('data.pending.has_updates'));
     }
 
-    public function test_admin_can_execute_system_update(): void
+    public function test_admin_can_execute_system_update_for_pending_components(): void
     {
         Storage::fake('local');
 
         $response = $this->actingAs($this->admin, 'sanctum')
             ->postJson('/api/v1/admin/system/updates/execute', [
-                'version' => '1.1.0',
+                'components' => ['permissions', 'settings'],
             ]);
 
         $response->assertStatus(200);
         $response->assertJsonPath('success', true);
 
         $this->assertDatabaseHas('system_updates', [
-            'version_to' => '1.1.0',
             'status' => 'completed',
+        ]);
+
+        $this->assertDatabaseHas('permissions', [
+            'name' => 'manage-users',
+        ]);
+
+        $this->assertDatabaseHas('settings', [
+            'type' => 'site_name',
         ]);
     }
 }

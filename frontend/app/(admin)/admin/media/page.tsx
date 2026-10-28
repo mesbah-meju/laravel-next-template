@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Trash2,
   Copy,
@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   List as ListIcon,
   Eye,
+  Search,
 } from 'lucide-react';
 import { mediaService } from '@/services/mediaService';
 import { useToast } from '@/hooks/useToast';
@@ -19,12 +20,15 @@ import { PageHeader } from '@/components/admin/PageHeader';
 import { FileUploader } from '@/components/admin/FileUploader';
 import { ConfirmationDialog } from '@/components/admin/ConfirmationDialog';
 import { Modal } from '@/components/admin/Modal';
-import { SearchInput } from '@/components/admin/SearchInput';
-import { FilterBar } from '@/components/admin/FilterBar';
 import { Pagination } from '@/components/admin/Pagination';
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
-import { Select } from '@/components/ui/Select';
-import { formatBytes, formatDate } from '@/lib/utils';
+import { Input } from '@/components/ui/Input';
+import {
+  DataTableFilters,
+  type DataTableFilterDef,
+  type DataTableFilterValue,
+} from '@/components/ui/DataTableFilters';
+import { formatBytes, formatDate, mediaUrl } from '@/lib/utils';
 import { MediaItem } from '@/types/media';
 import { PaginationMeta } from '@/types/api';
 
@@ -78,7 +82,12 @@ export default function MediaManagerPage() {
   }, [fetchMedia]);
 
   const handleCopyUrl = (item: MediaItem) => {
-    navigator.clipboard.writeText(item.url);
+    const url = mediaUrl(item.url);
+    const absolute =
+      typeof window !== 'undefined' && url.startsWith('/')
+        ? `${window.location.origin}${url}`
+        : url;
+    navigator.clipboard.writeText(absolute);
     setCopiedId(item.id);
     toast.success('URL Copied', 'Public media URL copied to clipboard.');
     setTimeout(() => setCopiedId(null), 2000);
@@ -99,6 +108,23 @@ export default function MediaManagerPage() {
       setIsSaving(false);
     }
   };
+
+  const mediaFilters: DataTableFilterDef[] = useMemo(
+    () => [
+      {
+        id: 'type',
+        label: 'Type',
+        type: 'select',
+        placeholder: 'Any type',
+        options: [
+          { label: 'Images', value: 'image' },
+          { label: 'Documents', value: 'application' },
+          { label: 'Videos', value: 'video' },
+        ],
+      },
+    ],
+    []
+  );
 
   return (
     <PermissionGuard permission="manage-media">
@@ -136,35 +162,44 @@ export default function MediaManagerPage() {
 
         {/* Upload Zone */}
         <div className="p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-          <FileUploader onUploadSuccess={() => fetchMedia()} />
+          <FileUploader
+            multiple
+            onUploadSuccess={() => {
+              setPage(1);
+              fetchMedia();
+            }}
+          />
         </div>
 
-        {/* Filter Bar */}
-        <FilterBar
-          hasActiveFilters={!!search || !!typeFilter}
-          onReset={() => {
-            setSearch('');
-            setTypeFilter('');
-            setPage(1);
-          }}
-        >
-          <SearchInput value={search} onChange={setSearch} placeholder="Search media by filename..." />
-          <div className="w-40">
-            <Select
-              options={[
-                { label: 'All Media Types', value: '' },
-                { label: 'Images', value: 'image' },
-                { label: 'Documents', value: 'application' },
-                { label: 'Videos', value: 'video' },
-              ]}
-              value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-        </FilterBar>
+        <div className="flex flex-wrap items-center gap-2.5 rounded-xl border border-border bg-card p-2.5 shadow-2xs">
+          <Input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search media by filename…"
+            leftIcon={<Search className="h-4 w-4" />}
+            clearable
+            onClear={() => {
+              setSearch('');
+              setPage(1);
+            }}
+            className="w-full max-w-xs"
+          />
+          <DataTableFilters
+            filters={mediaFilters}
+            values={{ type: typeFilter }}
+            onChange={(id, value: DataTableFilterValue) => {
+              if (id === 'type') setTypeFilter(typeof value === 'string' ? value : '');
+              setPage(1);
+            }}
+            onReset={() => {
+              setTypeFilter('');
+              setPage(1);
+            }}
+          />
+        </div>
 
         {/* Media Grid or List */}
         {isLoading ? (
@@ -193,7 +228,7 @@ export default function MediaManagerPage() {
                   {/* Thumbnail Preview */}
                   <div className="aspect-square bg-gray-50 dark:bg-gray-800/50 relative overflow-hidden flex items-center justify-center">
                     {isImage ? (
-                      <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
+                      <img src={mediaUrl(item.url)} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
                       <FileIcon className="w-10 h-10 text-indigo-500" />
                     )}
@@ -254,14 +289,14 @@ export default function MediaManagerPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0 flex items-center justify-center">
                         {isImage ? (
-                          <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
+                          <img src={mediaUrl(item.url)} alt={item.name} className="w-full h-full object-cover" />
                         ) : (
                           <FileIcon className="w-5 h-5 text-indigo-500" />
                         )}
                       </div>
                       <div className="truncate text-xs">
                         <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{item.name}</p>
-                        <p className="text-gray-400 text-[11px] truncate font-mono">{item.url}</p>
+                        <p className="text-gray-400 text-[11px] truncate font-mono">{mediaUrl(item.url)}</p>
                       </div>
                     </div>
 
@@ -318,7 +353,11 @@ export default function MediaManagerPage() {
             <div className="space-y-4">
               <div className="aspect-video rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden flex items-center justify-center">
                 {previewMedia.mime_type.startsWith('image/') ? (
-                  <img src={previewMedia.url} alt={previewMedia.name} className="max-w-full max-h-full object-contain" />
+                  <img
+                    src={mediaUrl(previewMedia.url)}
+                    alt={previewMedia.name}
+                    className="max-w-full max-h-full object-contain"
+                  />
                 ) : (
                   <FileIcon className="w-16 h-16 text-indigo-500" />
                 )}
@@ -348,7 +387,7 @@ export default function MediaManagerPage() {
                   <input
                     type="text"
                     readOnly
-                    value={previewMedia.url}
+                    value={mediaUrl(previewMedia.url)}
                     className="w-full text-xs font-mono p-2 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
                   />
                   <button
@@ -359,7 +398,7 @@ export default function MediaManagerPage() {
                     <Copy className="w-4 h-4" />
                   </button>
                   <a
-                    href={previewMedia.url}
+                    href={mediaUrl(previewMedia.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition"

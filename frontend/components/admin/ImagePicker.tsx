@@ -7,7 +7,7 @@ import { MediaItem } from '@/types/media';
 import { Modal } from './Modal';
 import { FileUploader } from './FileUploader';
 import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
+import { cn, mediaUrl } from '@/lib/utils';
 
 export interface ImagePickerProps {
   value?: string | null;
@@ -71,7 +71,7 @@ export function ImagePicker({
       <div className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xs">
         {value ? (
           <div className="relative w-14 h-14 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800 shrink-0 group">
-            <img src={value} alt="Selected" className="w-full h-full object-cover" />
+            <img src={mediaUrl(value)} alt="Selected" className="w-full h-full object-cover" />
             <button
               type="button"
               onClick={() => onChange('')}
@@ -160,35 +160,38 @@ export function ImagePicker({
                 </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-96 overflow-y-auto p-1 custom-scrollbar">
-                  {mediaList.map((m) => (
-                    <div
-                      key={m.id}
-                      onClick={() => handleSelect(m.url)}
-                      className={cn(
-                        'relative aspect-square rounded-xl border-2 overflow-hidden cursor-pointer group transition-all bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center',
-                        value === m.url
-                          ? 'border-indigo-600 ring-2 ring-indigo-500/20 shadow-md'
-                          : 'border-transparent hover:border-gray-300 dark:hover:border-gray-700'
-                      )}
-                    >
-                      <img
-                        src={m.url}
-                        alt={m.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                      {value === m.url && (
-                        <div className="absolute top-1.5 right-1.5 bg-indigo-600 text-white rounded-full p-1 shadow-sm">
-                          <Check className="w-3.5 h-3.5" />
+                  {mediaList.map((m) => {
+                    const url = mediaUrl(m.url);
+                    return (
+                      <div
+                        key={m.id}
+                        onClick={() => handleSelect(url)}
+                        className={cn(
+                          'relative aspect-square rounded-xl border-2 overflow-hidden cursor-pointer group transition-all bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center',
+                          value === url
+                            ? 'border-indigo-600 ring-2 ring-indigo-500/20 shadow-md'
+                            : 'border-transparent hover:border-gray-300 dark:hover:border-gray-700'
+                        )}
+                      >
+                        <img
+                          src={url}
+                          alt={m.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                        {value === url && (
+                          <div className="absolute top-1.5 right-1.5 bg-indigo-600 text-white rounded-full p-1 shadow-sm">
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] p-1.5 truncate opacity-0 group-hover:opacity-100 transition">
+                          {m.name}
                         </div>
-                      )}
-                      <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] p-1.5 truncate opacity-0 group-hover:opacity-100 transition">
-                        {m.name}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -197,7 +200,8 @@ export function ImagePicker({
               <FileUploader
                 onUploadSuccess={(newMedia) => {
                   loadMedia();
-                  handleSelect(newMedia.url);
+                  const item = Array.isArray(newMedia) ? newMedia[0] : newMedia;
+                  if (item?.url) handleSelect(mediaUrl(item.url));
                 }}
               />
             </div>

@@ -1,12 +1,22 @@
 import React from 'react';
 import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { TrafficBeacon } from '@/components/analytics/TrafficBeacon';
 import { menuService } from '@/services/menuService';
 import { settingService } from '@/services/settingService';
 import { MenuItem } from '@/types/menu';
 import { SiteSettings } from '@/types/setting';
+import {
+  getPublicSeoSettings,
+  isSeoFlagEnabled,
+  parseSocialLinks,
+  toAbsoluteUrl,
+} from '@/lib/seo';
+import { getSiteUrl } from '@/lib/env';
+import { ErrorState } from '@/components/ui/ErrorState';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export default async function PublicLayout({
   children,
@@ -37,7 +47,32 @@ export default async function PublicLayout({
     // Fallback if backend is not yet booted during static generation
   }
 
-  // Fallback items if database menu hasn't been seeded yet
+  const maintenanceEnabled = isSeoFlagEnabled(
+    settings.maintenance_mode as string | boolean | null | undefined,
+    false
+  );
+
+  if (maintenanceEnabled) {
+    const maintenanceMessage =
+      typeof settings.maintenance_message === 'string' && settings.maintenance_message.trim()
+        ? settings.maintenance_message.trim()
+        : undefined;
+
+    return (
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <main className="flex-1">
+          <ErrorState
+            code={503}
+            description={maintenanceMessage}
+            showHome={false}
+            showBack={false}
+            showDashboard
+          />
+        </main>
+      </div>
+    );
+  }
+
   if (headerItems.length === 0) {
     headerItems = [
       { title: 'Home', url: '/' },
@@ -45,8 +80,51 @@ export default async function PublicLayout({
     ];
   }
 
+  if (footerItems.length === 0) {
+    footerItems = [
+      { title: 'Home', url: '/' },
+      { title: 'About', url: '/about' },
+    ];
+  }
+
+  const seoSettings = await getPublicSeoSettings();
+  const baseUrl = (seoSettings.seo_canonical_base_url || getSiteUrl()).replace(/\/$/, '');
+  const siteName = seoSettings.seo_brand_name || seoSettings.site_name || 'Laravel Next Starter';
+  const logo = toAbsoluteUrl(seoSettings.site_logo || seoSettings.seo_default_og_image, baseUrl);
+  const sameAs = Object.values(parseSocialLinks(seoSettings.social_links)).filter(Boolean);
+  const structuredDataEnabled = isSeoFlagEnabled(seoSettings.seo_structured_data_enabled, true);
+
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      {structuredDataEnabled && (
+        <>
+          <JsonLd
+            schema={{
+              type: 'Organization',
+              name: siteName,
+              url: baseUrl,
+              logo,
+              sameAs: sameAs.length > 0 ? sameAs : undefined,
+              contactPoint:
+                seoSettings.site_email || seoSettings.site_phone
+                  ? {
+                      email: seoSettings.site_email,
+                      telephone: seoSettings.site_phone,
+                      contactType: 'customer support',
+                    }
+                  : undefined,
+            }}
+          />
+          <JsonLd
+            schema={{
+              type: 'WebSite',
+              name: siteName,
+              url: baseUrl,
+            }}
+          />
+        </>
+      )}
+      <TrafficBeacon />
       <Header navItems={headerItems} settings={settings} />
       <main className="flex-1">{children}</main>
       <Footer navItems={footerItems} settings={settings} />

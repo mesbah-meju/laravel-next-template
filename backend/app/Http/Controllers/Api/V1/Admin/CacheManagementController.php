@@ -61,7 +61,7 @@ class CacheManagementController extends Controller
      */
     public function index(): JsonResponse
     {
-        $this->authorizeAction();
+        authorize_permission('manage-cache');
 
         $defaultDriver = config('cache.default', 'file');
 
@@ -78,7 +78,7 @@ class CacheManagementController extends Controller
      */
     public function clear(Request $request): JsonResponse
     {
-        $this->authorizeAction();
+        authorize_permission('manage-cache');
 
         $request->validate([
             'action' => ['required', 'string', 'in:application,config,route,view,all'],
@@ -116,14 +116,6 @@ class CacheManagementController extends Controller
             );
 
             return $this->errorResponse("Failed to clear cache: {$e->getMessage()}", null, 500);
-        }
-    }
-
-    private function authorizeAction(): void
-    {
-        $user = auth()->user();
-        if (! $user || (! $user->can('manage-cache') && ! $user->hasRole('Super Admin'))) {
-            abort(403, 'Unauthorized. Cache management requires manage-cache permission.');
         }
     }
 }

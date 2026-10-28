@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\Admin\SettingController as AdminSettingControlle
 use App\Http\Controllers\Api\V1\Admin\SystemHealthController;
 use App\Http\Controllers\Api\V1\Admin\SystemNoticeController;
 use App\Http\Controllers\Api\V1\Admin\SystemUpdateController;
+use App\Http\Controllers\Api\V1\Admin\TrafficController as AdminTrafficController;
 use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\Api\V1\InstallerController;
 use App\Http\Controllers\Api\V1\Public\HealthController;
 use App\Http\Controllers\Api\V1\Public\MenuController as PublicMenuController;
 use App\Http\Controllers\Api\V1\Public\SettingController as PublicSettingController;
+use App\Http\Controllers\Api\V1\Public\TrafficController as PublicTrafficController;
 use App\Services\Seo\SeoAuditService;
 use App\Services\Seo\SitemapRegistry;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +54,10 @@ Route::prefix('v1')->group(function () {
         Route::get('settings', [PublicSettingController::class, 'index'])->name('settings.index');
         Route::get('sitemap', fn () => response()->json(['success' => true, 'data' => SitemapRegistry::getUrls()]))->name('sitemap');
         Route::get('redirects/resolve', [RedirectController::class, 'resolve'])->name('redirects.resolve');
+        // Soft per-IP limit lives in the controller (204). This is a hard abuse ceiling (429).
+        Route::post('traffic/hit', [PublicTrafficController::class, 'hit'])
+            ->middleware('throttle:180,1')
+            ->name('traffic.hit');
         Route::post('contact', function () {
             return response()->json(['success' => true, 'message' => 'Contact message received.']);
         })->middleware('throttle:6,1')->name('contact');
@@ -194,5 +200,10 @@ Route::prefix('v1')->group(function () {
         Route::get('system/updates/status', [SystemUpdateController::class, 'status'])->middleware('permission:view-system-updates')->name('system.updates.status');
         Route::post('system/updates/execute', [SystemUpdateController::class, 'execute'])->middleware('permission:manage-system-updates')->name('system.updates.execute');
         Route::get('system/updates/history', [SystemUpdateController::class, 'history'])->middleware('permission:view-system-updates')->name('system.updates.history');
+
+        // Traffic analytics (cache-first counters)
+        Route::get('system/traffic', [AdminTrafficController::class, 'index'])->middleware('permission:view-traffic')->name('system.traffic.index');
+        Route::post('system/traffic/flush', [AdminTrafficController::class, 'flush'])->middleware('permission:view-traffic')->name('system.traffic.flush');
+        Route::delete('system/traffic', [AdminTrafficController::class, 'reset'])->middleware('permission:manage-traffic')->name('system.traffic.reset');
     });
 });

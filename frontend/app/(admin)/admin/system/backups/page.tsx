@@ -11,7 +11,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useToast } from '@/hooks/useToast';
 import { backupService } from '@/services/backupService';
 import { Backup, BackupEnvironmentStatus } from '@/types/backup';
-import { formatDate } from '@/lib/utils';
+import { formatBytes, formatDate } from '@/lib/utils';
 
 export default function BackupsPage() {
   const [backups, setBackups] = useState<Backup[]>([]);
@@ -83,14 +83,6 @@ export default function BackupsPage() {
     }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   const columns: Column<Backup>[] = [
     {
       key: 'filename',
@@ -114,7 +106,7 @@ export default function BackupsPage() {
       header: 'Size',
       render: (b: Backup) => (
         <span className="font-mono text-xs font-semibold text-foreground">
-          {formatFileSize(b.size_bytes)}
+          {formatBytes(b.size_bytes)}
         </span>
       ),
     },

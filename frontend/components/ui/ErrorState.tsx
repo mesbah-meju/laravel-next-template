@@ -115,14 +115,16 @@ export function ErrorState({
     <div className="min-h-[70vh] flex items-center justify-center p-4">
       <div className="text-center max-w-lg space-y-5">
         <div
-          className={`w-18 h-18 rounded-2xl flex items-center justify-center mx-auto border shadow-xs ${config.accentColor}`}
+          className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border shadow-sm ${config.accentColor}`}
         >
-          <Icon className="w-9 h-9" />
+          <Icon className="h-8 w-8" />
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">{displayTitle}</h1>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">{displayDescription}</p>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            {displayTitle}
+          </h1>
+          <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">{displayDescription}</p>
         </div>
 
         <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
@@ -139,19 +141,21 @@ export function ErrorState({
           )}
 
           {showDashboard && (
-            <Link href="/admin/dashboard">
-              <Button variant="outline" className="flex items-center gap-2">
-                <LayoutDashboard className="w-4 h-4" /> Admin Dashboard
-              </Button>
-            </Link>
+            <Button asChild variant="outline">
+              <Link href="/admin">
+                <LayoutDashboard className="h-4 w-4" />
+                Admin
+              </Link>
+            </Button>
           )}
 
           {showHome && (
-            <Link href="/">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Home className="w-4 h-4" /> Home Page
-              </Button>
-            </Link>
+            <Button asChild variant="outline">
+              <Link href="/">
+                <Home className="h-4 w-4" />
+                Home
+              </Link>
+            </Button>
           )}
 
           {customActions}

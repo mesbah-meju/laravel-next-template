@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Bell,
@@ -12,20 +12,20 @@ import {
   AlertOctagon,
   Info,
   ArrowRight,
-  Filter,
 } from 'lucide-react';
 import { notificationService } from '@/services/notificationService';
 import { useToast } from '@/hooks/useToast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PageHeader } from '@/components/admin/PageHeader';
-import { DataTable, Column } from '@/components/admin/DataTable';
-import { Pagination } from '@/components/admin/Pagination';
-import { SearchInput } from '@/components/admin/SearchInput';
-import { FilterBar } from '@/components/admin/FilterBar';
+import {
+  DataTable,
+  Column,
+  type DataTableFilterDef,
+  type DataTableFilterValue,
+} from '@/components/admin/DataTable';
 import { ConfirmationDialog } from '@/components/admin/ConfirmationDialog';
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select';
 import { formatDate } from '@/lib/utils';
 import { AppNotification } from '@/types/notification';
 import { PaginationMeta } from '@/types/api';
@@ -228,6 +228,30 @@ export default function NotificationsPage() {
     },
   ];
 
+  const tableFilters: DataTableFilterDef[] = useMemo(
+    () => [
+      {
+        id: 'status',
+        label: 'Status',
+        type: 'select',
+        placeholder: 'All notifications',
+        options: [
+          { label: 'Unread only', value: 'unread' },
+          { label: 'Read only', value: 'read' },
+        ],
+      },
+    ],
+    []
+  );
+
+  const handleFilterChange = (id: string, value: DataTableFilterValue) => {
+    if (id === 'status') {
+      const next = typeof value === 'string' && value ? value : 'all';
+      setStatusFilter(next as 'all' | 'unread' | 'read');
+      setPage(1);
+    }
+  };
+
   return (
     <PermissionGuard permission="view-notifications">
       <div className="space-y-6">
@@ -248,48 +272,31 @@ export default function NotificationsPage() {
           }
         />
 
-        {/* Filter Bar */}
-        <FilterBar
-          hasActiveFilters={!!search || statusFilter !== 'all'}
-          onReset={() => {
-            setSearch('');
-            setStatusFilter('all');
-            setPage(1);
-          }}
-        >
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search notification messages..."
-          />
-
-          <div className="w-40">
-            <Select
-              options={[
-                { label: 'All Notifications', value: 'all' },
-                { label: 'Unread Only', value: 'unread' },
-                { label: 'Read Only', value: 'read' },
-              ]}
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value as 'all' | 'unread' | 'read');
-                setPage(1);
-              }}
-            />
-          </div>
-        </FilterBar>
-
-        {/* Data Table */}
         <DataTable
           columns={columns}
           data={notifications}
           isLoading={isLoading}
           emptyTitle="No notifications found"
           emptyDescription="You have no notifications matching your search or filters."
+          searchValue={search}
+          onSearchChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          searchPlaceholder="Search notification messages…"
+          filters={tableFilters}
+          filterValues={{ status: statusFilter === 'all' ? '' : statusFilter }}
+          onFilterChange={handleFilterChange}
+          onFiltersReset={() => {
+            setStatusFilter('all');
+            setPage(1);
+          }}
+          pagination={meta}
+          onPageChange={setPage}
+          enableColumnVisibility
+          enableExport
+          exportFilename="notifications"
         />
-
-        {/* Pagination */}
-        <Pagination meta={meta} onPageChange={setPage} />
 
         {/* Clear All Confirmation */}
         <ConfirmationDialog

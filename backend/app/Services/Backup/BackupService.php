@@ -135,7 +135,7 @@ class BackupService
 
             ActivityLogger::log(
                 action: 'backup_created',
-                description: "Created database backup: {$filename} (".round($size / 1024, 2).' KB)',
+                description: "Created database backup: {$filename} (".format_bytes((int) $size).')',
                 module: 'backups',
                 newValues: ['filename' => $filename, 'size' => $size, 'driver' => $driver]
             );

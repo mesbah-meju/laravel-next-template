@@ -10,7 +10,7 @@
     --card-foreground: 15 23 42;
     --popover: 255 255 255;
     --popover-foreground: 15 23 42;
-    --primary: 79 70 229;
+    --primary: 29 75 232;
     --primary-foreground: 255 255 255;
     --secondary: 241 245 249;
     --secondary-foreground: 15 23 42;
@@ -22,8 +22,8 @@
     --destructive-foreground: 255 255 255;
     --border: 226 232 240;
     --input: 226 232 240;
-    --ring: 99 102 241;
-    --radius: 0.75rem;
+    --ring: 29 75 232;
+    --radius: 0.625rem;
   }
 
   .dark {
@@ -33,7 +33,7 @@
     --card-foreground: 248 250 252;
     --popover: 15 18 25;
     --popover-foreground: 248 250 252;
-    --primary: 99 102 241;
+    --primary: 59 99 246;
     --primary-foreground: 255 255 255;
     --secondary: 26 31 44;
     --secondary-foreground: 248 250 252;
@@ -45,44 +45,55 @@
     --destructive-foreground: 255 255 255;
     --border: 33 39 55;
     --input: 33 39 55;
-    --ring: 99 102 241;
+    --ring: 59 99 246;
   }
 
   * {
-    border-color: rgba(226, 232, 240, 0.85);
-  }
-
-  .dark * {
-    border-color: rgba(33, 39, 55, 0.85);
+    border-color: rgb(var(--border));
   }
 
   body {
-    background-color: #f8fafc;
-    color: #0f172a;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
-
-  .dark body {
-    background-color: #090b10;
-    color: #f8fafc;
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    font-feature-settings: "ss01", "cv11";
   }
 }
 
-/* Modern soft card utility */
+@theme inline {
+  --color-background: rgb(var(--background));
+  --color-foreground: rgb(var(--foreground));
+  --color-card: rgb(var(--card));
+  --color-card-foreground: rgb(var(--card-foreground));
+  --color-popover: rgb(var(--popover));
+  --color-popover-foreground: rgb(var(--popover-foreground));
+  --color-primary: rgb(var(--primary));
+  --color-primary-foreground: rgb(var(--primary-foreground));
+  --color-secondary: rgb(var(--secondary));
+  --color-secondary-foreground: rgb(var(--secondary-foreground));
+  --color-muted: rgb(var(--muted));
+  --color-muted-foreground: rgb(var(--muted-foreground));
+  --color-accent: rgb(var(--accent));
+  --color-accent-foreground: rgb(var(--accent-foreground));
+  --color-destructive: rgb(var(--destructive));
+  --color-destructive-foreground: rgb(var(--destructive-foreground));
+  --color-border: rgb(var(--border));
+  --color-input: rgb(var(--input));
+  --color-ring: rgb(var(--ring));
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 0.25rem);
+  --radius-xl: calc(var(--radius) + 0.5rem);
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
 .soft-card {
-  background-color: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
-  border-radius: 1rem;
+  background-color: rgb(var(--card));
+  border: 1px solid rgb(var(--border));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  border-radius: var(--radius-lg);
 }
 
-.dark .soft-card {
-  background-color: #0f1219;
-  border-color: rgba(33, 39, 55, 0.9);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
-}
-
-/* Modern subtle scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -93,33 +104,31 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(203, 213, 225, 0.6);
+  background: rgb(148 163 184 / 0.55);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.8);
+  background: rgb(100 116 139 / 0.75);
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.6);
+  background: rgb(71 85 105 / 0.6);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(71, 85, 105, 0.8);
+  background: rgb(100 116 139 / 0.8);
 }
 
-/* Utility used by Select/MultiSelect/Combobox dropdown scrollable lists */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(203, 213, 225, 0.6) transparent;
+  scrollbar-color: rgb(148 163 184 / 0.55) transparent;
 }
 
 .dark .custom-scrollbar {
-  scrollbar-color: rgba(51, 65, 85, 0.6) transparent;
+  scrollbar-color: rgb(71 85 105 / 0.6) transparent;
 }
 
-/* shadcn / Radix animation primitives */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -140,6 +149,11 @@
   to { opacity: 0; transform: scale(0.95); }
 }
 
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .animate-in {
   animation-duration: 150ms;
   animation-fill-mode: both;
@@ -153,7 +167,44 @@
   animation-name: zoomIn95;
 }
 
-/* Radix Select / Popover content animation via data attributes */
+.animate-rise {
+  animation: riseIn 0.6s ease-out both;
+}
+
+.animate-rise-delay {
+  animation: riseIn 0.7s ease-out 0.12s both;
+}
+
+.animate-rise-delay-2 {
+  animation: riseIn 0.7s ease-out 0.24s both;
+}
+
+@keyframes authOrb {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(12px, -18px, 0) scale(1.06);
+  }
+}
+
+.auth-orb {
+  animation: authOrb 12s ease-in-out infinite;
+}
+
+.auth-orb-delayed {
+  animation: authOrb 16s ease-in-out 1.5s infinite;
+}
+
+.auth-grid {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.08) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at center, black, transparent 78%);
+}
+
 [data-state="open"] .animate-in {
   animation-name: zoomIn95;
 }

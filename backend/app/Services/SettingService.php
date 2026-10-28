@@ -30,6 +30,7 @@ class SettingService
         'default_meta_description',
         'social_links',
         'maintenance_mode',
+        'maintenance_message',
         'seo_default_title',
         'seo_title_separator',
         'seo_title_template',
@@ -210,7 +211,6 @@ class SettingService
      */
     public function clearCache(): void
     {
-        Cache::forget('settings');
-        Cache::forget('all_settings_key_value');
+        clear_settings_cache();
     }
 }

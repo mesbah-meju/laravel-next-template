@@ -15,38 +15,49 @@ class SystemUpdateController extends Controller
     use ApiResponse;
 
     /**
-     * Get current version and update readiness.
+     * Get current version, pending update detection, and readiness.
      */
     public function status(): JsonResponse
     {
-        $this->authorizePermission('view-system-updates');
+        authorize_permission('view-system-updates');
 
         $currentVersion = UpdateService::getCurrentVersion();
+        $pending = UpdateService::detectPendingUpdates();
         $available = UpdateService::getAvailableUpdate();
-        $preflight = UpdateService::runPreflightCheck($available['version'] ?? '1.1.0');
+        $preflight = UpdateService::runPreflightCheck($available['version'] ?? null);
 
         return $this->successResponse([
             'current_version' => $currentVersion,
+            'pending' => $pending,
             'available_update' => $available,
             'preflight' => $preflight,
         ], 'System update status retrieved.');
     }
 
     /**
-     * Execute controlled update.
+     * Execute controlled update for detected pending components.
      */
     public function execute(Request $request): JsonResponse
     {
-        $this->authorizePermission('manage-system-updates');
+        authorize_permission('manage-system-updates');
 
         $validated = $request->validate([
-            'version' => ['required', 'string'],
+            'version' => ['nullable', 'string', 'max:50'],
+            'components' => ['nullable', 'array'],
+            'components.*' => ['string', 'in:migrations,permissions,settings'],
         ]);
 
         try {
-            $record = UpdateService::executeUpdate($validated['version'], $request->user()?->id);
+            $record = UpdateService::executeUpdate(
+                $validated['version'] ?? null,
+                $request->user()?->id,
+                $validated['components'] ?? null
+            );
 
-            return $this->successResponse($record, "System updated successfully to version {$record->version_to}.");
+            return $this->successResponse(
+                $record,
+                "System updated successfully to version {$record->version_to}."
+            );
         } catch (Exception $e) {
             return $this->errorResponse("System update failed: {$e->getMessage()}", null, 500);
         }
@@ -57,20 +68,12 @@ class SystemUpdateController extends Controller
      */
     public function history(Request $request): JsonResponse
     {
-        $this->authorizePermission('view-system-updates');
+        authorize_permission('view-system-updates');
 
         $updates = SystemUpdate::with('initiator:id,name,email')
             ->latest()
             ->paginate($request->input('per_page', 15));
 
         return $this->paginatedResponse($updates, 'Update history retrieved.');
-    }
-
-    private function authorizePermission(string $permission): void
-    {
-        $user = auth()->user();
-        if (! $user || (! $user->can($permission) && ! $user->hasRole('Super Admin'))) {
-            abort(403, "Unauthorized. Action requires {$permission} permission.");
-        }
     }
 }

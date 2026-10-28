@@ -18,9 +18,6 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { usePermission } from '@/hooks/usePermission';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { DataTable, Column } from '@/components/admin/DataTable';
-import { Pagination } from '@/components/admin/Pagination';
-import { SearchInput } from '@/components/admin/SearchInput';
-import { FilterBar } from '@/components/admin/FilterBar';
 import { Modal } from '@/components/admin/Modal';
 import { ConfirmationDialog } from '@/components/admin/ConfirmationDialog';
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
@@ -269,32 +266,24 @@ export default function BackgroundJobsPage() {
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <FilterBar
-          hasActiveFilters={!!search}
-          onReset={() => {
-            setSearch('');
-            setPage(1);
-          }}
-        >
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search failed job payload or exception..."
-          />
-        </FilterBar>
-
-        {/* Data Table */}
         <DataTable
           columns={columns}
           data={jobs}
           isLoading={isLoading}
           emptyTitle="No failed jobs"
           emptyDescription="All queue workers and background jobs are operating cleanly without exceptions."
+          searchValue={search}
+          onSearchChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          searchPlaceholder="Search failed job payload or exception…"
+          pagination={meta}
+          onPageChange={setPage}
+          enableColumnVisibility
+          enableExport
+          exportFilename="failed-jobs"
         />
-
-        {/* Pagination */}
-        <Pagination meta={meta} onPageChange={setPage} />
 
         {/* Stack Trace & Details Modal */}
         <Modal

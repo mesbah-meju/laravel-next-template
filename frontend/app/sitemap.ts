@@ -1,23 +1,45 @@
 import { MetadataRoute } from 'next';
+import { getBackendUrl, getSiteUrl } from '@/lib/env';
 import { getPublicSeoSettings } from '@/lib/seo';
+
+type BackendSitemapItem = {
+  url: string;
+  last_modified?: string;
+  change_frequency?: string;
+  priority?: number;
+};
+
+function rewriteToSiteHost(url: string, siteUrl: string): string {
+  try {
+    const parsed = new URL(url);
+    const site = new URL(siteUrl);
+    parsed.protocol = site.protocol;
+    parsed.host = site.host;
+    return parsed.toString().replace(/\/$/, '') || siteUrl;
+  } catch {
+    if (url.startsWith('/')) return `${siteUrl}${url}`;
+    return url;
+  }
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const settings = await getPublicSeoSettings();
-  const siteUrl = settings.seo_canonical_base_url || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const siteUrl = (settings.seo_canonical_base_url || getSiteUrl()).replace(/\/$/, '');
+  const apiUrl = getBackendUrl();
 
   try {
     const res = await fetch(`${apiUrl}/api/v1/public/sitemap`, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 3600, tags: ['sitemap'] },
     });
 
     if (res.ok) {
       const json = await res.json();
-      if (Array.isArray(json.data)) {
-        return json.data.map((item: { url: string; last_modified?: string; change_frequency?: string; priority?: number }) => ({
-          url: item.url,
+      if (Array.isArray(json.data) && json.data.length > 0) {
+        return json.data.map((item: BackendSitemapItem) => ({
+          url: rewriteToSiteHost(item.url, siteUrl),
           lastModified: item.last_modified ? new Date(item.last_modified) : new Date(),
-          changeFrequency: (item.change_frequency as 'daily' | 'weekly' | 'monthly' | 'always' | 'hourly' | 'yearly' | 'never') || 'weekly',
+          changeFrequency:
+            (item.change_frequency as MetadataRoute.Sitemap[number]['changeFrequency']) || 'weekly',
           priority: item.priority ?? 0.7,
         }));
       }

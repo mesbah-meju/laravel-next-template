@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Shield, UserCheck, UserX, Mail, Lock, LogIn } from 'lucide-react';
 import { userService } from '@/services/userService';
 import { roleService } from '@/services/roleService';
@@ -9,10 +9,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PageHeader } from '@/components/admin/PageHeader';
-import { DataTable, Column } from '@/components/admin/DataTable';
-import { Pagination } from '@/components/admin/Pagination';
-import { SearchInput } from '@/components/admin/SearchInput';
-import { FilterBar } from '@/components/admin/FilterBar';
+import { DataTable, Column, type DataTableFilterDef, type DataTableFilterValue } from '@/components/ui/DataTable';
 import { Modal } from '@/components/admin/Modal';
 import { ConfirmationDialog } from '@/components/admin/ConfirmationDialog';
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
@@ -22,7 +19,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { MultiSelect } from '@/components/ui/MultiSelect';
 import { FormError } from '@/components/ui/FormError';
-import { formatDate } from '@/lib/utils';
+import { compactParams, emptyPaginationMeta, formatDate } from '@/lib/utils';
 import { User, UserStatus, Role } from '@/types/user';
 import { PaginationMeta } from '@/types/api';
 import { BulkActionBar } from '@/components/admin/BulkActionBar';
@@ -31,14 +28,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
-  const [meta, setMeta] = useState<PaginationMeta>({
-    total: 0,
-    count: 0,
-    per_page: 15,
-    current_page: 1,
-    total_pages: 1,
-    has_more: false,
-  });
+  const [meta, setMeta] = useState<PaginationMeta>(emptyPaginationMeta());
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -73,13 +63,15 @@ export default function UsersPage() {
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await userService.getUsers({
-        search: debouncedSearch || undefined,
-        status: statusFilter || undefined,
-        role: roleFilter || undefined,
-        page,
-        per_page: 15,
-      });
+      const res = await userService.getUsers(
+        compactParams({
+          search: debouncedSearch,
+          status: statusFilter,
+          role: roleFilter,
+          page,
+          per_page: 15,
+        })
+      );
       setUsers(res.data);
       setMeta(res.pagination);
     } catch {
@@ -329,6 +321,37 @@ export default function UsersPage() {
 
   const roleOptions = roles.map((r) => ({ label: r.name, value: r.name }));
 
+  const tableFilters: DataTableFilterDef[] = useMemo(
+    () => [
+      {
+        id: 'status',
+        label: 'Status',
+        type: 'select',
+        placeholder: 'Any status',
+        options: [
+          { label: 'Active', value: 'active' },
+          { label: 'Inactive', value: 'inactive' },
+          { label: 'Suspended', value: 'suspended' },
+        ],
+      },
+      {
+        id: 'role',
+        label: 'Role',
+        type: 'select',
+        placeholder: 'Any role',
+        options: roles.map((r) => ({ label: r.name, value: r.name })),
+      },
+    ],
+    [roles]
+  );
+
+  const handleFilterChange = (id: string, value: DataTableFilterValue) => {
+    const next = typeof value === 'string' ? value : '';
+    if (id === 'status') setStatusFilter(next);
+    if (id === 'role') setRoleFilter(next);
+    setPage(1);
+  };
+
   return (
     <PermissionGuard permission="manage-users">
       <div className="space-y-6">
@@ -342,48 +365,6 @@ export default function UsersPage() {
           }
         />
 
-        {/* Filter Bar */}
-        <FilterBar
-          hasActiveFilters={!!search || !!statusFilter || !!roleFilter}
-          onReset={() => {
-            setSearch('');
-            setStatusFilter('');
-            setRoleFilter('');
-            setPage(1);
-          }}
-        >
-          <SearchInput value={search} onChange={setSearch} placeholder="Search by name or email..." />
-          <div className="w-40">
-            <Select
-              options={[
-                { label: 'All Statuses', value: '' },
-                { label: 'Active', value: 'active' },
-                { label: 'Inactive', value: 'inactive' },
-                { label: 'Suspended', value: 'suspended' },
-              ]}
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="w-40">
-            <Select
-              options={[
-                { label: 'All Roles', value: '' },
-                ...roles.map((r) => ({ label: r.name, value: r.name })),
-              ]}
-              value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-        </FilterBar>
-
-        {/* Bulk Action Bar */}
         <BulkActionBar
           resource="users"
           selectedIds={selectedIds}
@@ -394,7 +375,6 @@ export default function UsersPage() {
           }}
         />
 
-        {/* Data Table */}
         <DataTable
           columns={columns}
           data={users}
@@ -413,10 +393,28 @@ export default function UsersPage() {
               setSelectedIds([]);
             }
           }}
+          enableColumnVisibility
+          enableExport
+          enableDensity
+          exportFilename="users"
+          searchValue={search}
+          onSearchChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          searchPlaceholder="Search by name or email…"
+          filters={tableFilters}
+          filterValues={{ status: statusFilter, role: roleFilter }}
+          onFilterChange={handleFilterChange}
+          onFiltersReset={() => {
+            setStatusFilter('');
+            setRoleFilter('');
+            setPage(1);
+          }}
+          striped
+          pagination={meta}
+          onPageChange={setPage}
         />
-
-        {/* Pagination */}
-        <Pagination meta={meta} onPageChange={setPage} />
 
         {/* Create / Edit Modal */}
         <Modal

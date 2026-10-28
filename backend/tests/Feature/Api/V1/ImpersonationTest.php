@@ -4,6 +4,8 @@ namespace Tests\Feature\Api\V1;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -82,17 +84,40 @@ class ImpersonationTest extends TestCase
         $startRes = $this->actingAs($this->superAdmin)
             ->postJson("/api/v1/admin/impersonate/{$this->regularUser->id}");
 
+        $plainToken = $startRes->json('data.token');
+        $this->assertNotEmpty($plainToken);
+
+        $accessToken = PersonalAccessToken::findToken($plainToken);
+        $this->assertNotNull($accessToken);
+        $this->assertTrue(Cache::has("impersonation_token_{$accessToken->id}"));
+
         Sanctum::actingAs($this->regularUser, ['impersonated']);
+        // Bind the currentAccessToken() used by the controller to the real PAT
+        $this->regularUser->withAccessToken($accessToken);
 
         $stopRes = $this->postJson('/api/v1/admin/impersonate/stop/session');
 
         $stopRes->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.user.id', $this->superAdmin->id);
+            ->assertJsonPath('data.user.id', $this->superAdmin->id)
+            ->assertJsonStructure(['data' => ['token', 'user']]);
 
         $this->assertDatabaseHas('activity_logs', [
             'action' => 'impersonation_stopped',
             'subject_id' => $this->regularUser->id,
         ]);
+
+        $this->assertFalse(Cache::has("impersonation_token_{$accessToken->id}"));
+        $this->assertFalse(Cache::has("impersonation_target_{$this->regularUser->id}"));
+    }
+
+    public function test_stop_without_active_binding_is_rejected(): void
+    {
+        Sanctum::actingAs($this->regularUser, ['impersonated']);
+
+        $stopRes = $this->postJson('/api/v1/admin/impersonate/stop/session');
+
+        $stopRes->assertStatus(400)
+            ->assertJsonPath('success', false);
     }
 }

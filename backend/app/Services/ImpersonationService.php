@@ -10,6 +10,8 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class ImpersonationService
 {
+    private const CACHE_TTL_HOURS = 8;
+
     /**
      * Start impersonating a target user.
      */
@@ -19,36 +21,35 @@ class ImpersonationService
             throw new Exception('You cannot impersonate yourself.');
         }
 
-        // Only super admin or user with impersonate permission
-        if (! $admin->hasRole('Super Admin') && ! $admin->can('impersonate-users')) {
+        if (! user_can('impersonate-users', $admin)) {
             throw new Exception('Unauthorized to impersonate users.');
         }
 
-        // Cannot impersonate another Super Admin
-        if ($target->hasRole('Super Admin')) {
+        if (is_super_admin($target)) {
             throw new Exception('Cannot impersonate another Super Admin.');
         }
 
-        // Create impersonation token for the target user
         $tokenName = "impersonation_by_{$admin->id}";
         $newAccessToken = $target->createToken($tokenName, ['impersonated']);
         $plainTextToken = $newAccessToken->plainTextToken;
-
-        // Cache the association (token ID & target user ID -> admin info) for 8 hours
         $tokenId = $newAccessToken->accessToken->id;
+
         $sessionData = [
             'admin_id' => $admin->id,
             'admin_name' => $admin->name,
             'admin_email' => $admin->email,
             'target_id' => $target->id,
+            'token_id' => $tokenId,
             'started_at' => now()->toIso8601String(),
         ];
 
-        Cache::put("impersonation_token_{$tokenId}", $sessionData, now()->addHours(8));
-        Cache::put("impersonation_target_{$target->id}", $sessionData, now()->addHours(8));
+        $ttl = now()->addHours(self::CACHE_TTL_HOURS);
+        Cache::put("impersonation_token_{$tokenId}", $sessionData, $ttl);
+        Cache::put("impersonation_target_{$target->id}", $sessionData, $ttl);
 
         if (request()->hasSession()) {
             request()->session()->put('impersonated_by', $admin->id);
+            request()->session()->put('impersonation_target_id', $target->id);
         }
 
         ActivityLogger::log(
@@ -74,61 +75,34 @@ class ImpersonationService
     }
 
     /**
-     * Stop current impersonation and restore super admin session.
+     * Stop impersonation only when the caller is the active impersonated target
+     * and a live cache/session binding proves the original admin.
      */
     public function stop(User $impersonatedUser, mixed $currentToken = null): array
     {
-        $adminId = null;
-        $isTokenImpersonation = false;
-        $isSessionImpersonation = false;
+        $resolved = $this->resolveActiveImpersonation($impersonatedUser, $currentToken);
 
-        // 1. Check Session-based impersonation
-        if (request()->hasSession() && request()->session()->has('impersonated_by')) {
-            $adminId = request()->session()->pull('impersonated_by');
-            $isSessionImpersonation = true;
-        }
-
-        // 2. Check Token-based impersonation
-        if (! $adminId) {
-            $tokenId = (is_object($currentToken) && isset($currentToken->id)) ? $currentToken->id : null;
-            $cachedInfo = $tokenId ? Cache::get("impersonation_token_{$tokenId}") : null;
-
-            if ($cachedInfo && isset($cachedInfo['admin_id'])) {
-                $adminId = (int) $cachedInfo['admin_id'];
-                $isTokenImpersonation = true;
-            } elseif (is_object($currentToken) && isset($currentToken->name) && preg_match('/^impersonation_by_(\d+)$/', (string) $currentToken->name, $matches)) {
-                $adminId = (int) $matches[1];
-                $isTokenImpersonation = true;
-            } elseif (is_object($currentToken) && method_exists($currentToken, 'can') && $currentToken->can('impersonated')) {
-                $targetCache = Cache::get("impersonation_target_{$impersonatedUser->id}");
-                if ($targetCache && isset($targetCache['admin_id'])) {
-                    $adminId = (int) $targetCache['admin_id'];
-                    $isTokenImpersonation = true;
-                }
-            }
-        }
-
-        if (! $adminId || (! $isTokenImpersonation && ! $isSessionImpersonation)) {
+        if ($resolved === null) {
             throw new Exception('Not currently in an active impersonation session.');
         }
 
-        $admin = User::findOrFail($adminId);
+        ['admin_id' => $adminId, 'mode' => $mode, 'token' => $token] = $resolved;
 
-        // Delete impersonation token if real token object
-        if ($currentToken instanceof PersonalAccessToken) {
-            $currentToken->delete();
-            Cache::forget("impersonation_token_{$currentToken->id}");
+        $admin = User::find($adminId);
+        if (! $admin || ! user_can('impersonate-users', $admin)) {
+            $this->clearBindings($impersonatedUser, $token, $mode);
+            throw new Exception('Original administrator session is no longer valid.');
         }
-        Cache::forget("impersonation_target_{$impersonatedUser->id}");
 
-        if ($isSessionImpersonation) {
+        $this->clearBindings($impersonatedUser, $token, $mode);
+
+        if ($mode === 'session' && request()->hasSession()) {
             Auth::login($admin);
             request()->session()->regenerate();
         }
 
-        // Create fresh token for admin only if token-based impersonation
         $adminToken = null;
-        if ($isTokenImpersonation) {
+        if ($mode === 'token') {
             $adminToken = $admin->createToken('admin_restored')->plainTextToken;
         }
 
@@ -146,6 +120,7 @@ class ImpersonationService
         $result = [
             'user' => $admin->load('roles', 'permissions'),
         ];
+
         if ($adminToken) {
             $result['token'] = $adminToken;
         }
@@ -154,34 +129,86 @@ class ImpersonationService
     }
 
     /**
-     * Get current impersonation status.
+     * Get current impersonation status for the authenticated user.
      */
     public function getStatus(User $user, mixed $currentToken = null): ?array
     {
-        if (request()->hasSession() && request()->session()->has('impersonated_by')) {
-            $adminId = request()->session()->get('impersonated_by');
-            $admin = User::find($adminId);
-
-            return [
-                'admin_id' => $adminId,
-                'admin_name' => $admin?->name,
-                'admin_email' => $admin?->email,
-                'target_id' => $user->id,
-                'started_at' => now()->toIso8601String(),
-            ];
+        $resolved = $this->resolveActiveImpersonation($user, $currentToken);
+        if ($resolved === null) {
+            return null;
         }
 
-        if (is_object($currentToken) && isset($currentToken->id)) {
-            $status = Cache::get("impersonation_token_{$currentToken->id}");
-            if ($status) {
-                return $status;
+        $admin = User::find($resolved['admin_id']);
+
+        return [
+            'admin_id' => $resolved['admin_id'],
+            'admin_name' => $admin?->name,
+            'admin_email' => $admin?->email,
+            'target_id' => $user->id,
+            'started_at' => $resolved['started_at'] ?? null,
+        ];
+    }
+
+    /**
+     * @return array{admin_id:int, mode:string, token:?PersonalAccessToken, started_at:?string}|null
+     */
+    private function resolveActiveImpersonation(User $user, mixed $currentToken = null): ?array
+    {
+        // Token path (preferred for SPA Bearer impersonation tokens)
+        if ($currentToken instanceof PersonalAccessToken && $currentToken->can('impersonated')) {
+            $cached = Cache::get("impersonation_token_{$currentToken->id}");
+            if (
+                is_array($cached)
+                && (int) ($cached['target_id'] ?? 0) === $user->id
+                && ! empty($cached['admin_id'])
+            ) {
+                return [
+                    'admin_id' => (int) $cached['admin_id'],
+                    'mode' => 'token',
+                    'token' => $currentToken,
+                    'started_at' => $cached['started_at'] ?? null,
+                ];
+            }
+
+            // Stale token with ability but no cache — refuse elevation
+            return null;
+        }
+
+        // Session path: session + target cache must agree
+        if (request()->hasSession() && request()->session()->has('impersonated_by')) {
+            $sessionAdminId = (int) request()->session()->get('impersonated_by');
+            $sessionTargetId = (int) request()->session()->get('impersonation_target_id', 0);
+            $targetCache = Cache::get("impersonation_target_{$user->id}");
+
+            if (
+                $sessionTargetId === $user->id
+                && is_array($targetCache)
+                && (int) ($targetCache['admin_id'] ?? 0) === $sessionAdminId
+                && (int) ($targetCache['target_id'] ?? 0) === $user->id
+            ) {
+                return [
+                    'admin_id' => $sessionAdminId,
+                    'mode' => 'session',
+                    'token' => $currentToken instanceof PersonalAccessToken ? $currentToken : null,
+                    'started_at' => $targetCache['started_at'] ?? null,
+                ];
             }
         }
 
-        if (is_object($currentToken) && method_exists($currentToken, 'can') && $currentToken->can('impersonated')) {
-            return Cache::get("impersonation_target_{$user->id}");
+        return null;
+    }
+
+    private function clearBindings(User $target, ?PersonalAccessToken $token, string $mode): void
+    {
+        if ($token instanceof PersonalAccessToken) {
+            Cache::forget("impersonation_token_{$token->id}");
+            $token->delete();
         }
 
-        return null;
+        Cache::forget("impersonation_target_{$target->id}");
+
+        if ($mode === 'session' && request()->hasSession()) {
+            request()->session()->forget(['impersonated_by', 'impersonation_target_id']);
+        }
     }
 }

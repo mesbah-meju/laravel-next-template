@@ -20,11 +20,19 @@ class SitemapRegistry
     }
 
     /**
+     * Public frontend base URL used in sitemap entries (not the API host).
+     */
+    public static function frontendUrl(): string
+    {
+        return rtrim((string) env('FRONTEND_URL', config('app.url', 'http://127.0.0.1:3000')), '/');
+    }
+
+    /**
      * Collect all indexable URLs across all providers.
      */
     public static function getUrls(): array
     {
-        $siteUrl = config('app.url', 'http://localhost:3000');
+        $siteUrl = self::frontendUrl();
 
         // Static core starter routes
         $urls = [
@@ -43,7 +51,7 @@ class SitemapRegistry
         ];
 
         // Execute dynamic module providers
-        foreach (self::$providers as $key => $provider) {
+        foreach (self::$providers as $provider) {
             try {
                 $providerUrls = call_user_func($provider);
                 if (is_array($providerUrls)) {

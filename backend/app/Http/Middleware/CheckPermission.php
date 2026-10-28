@@ -24,27 +24,7 @@ class CheckPermission
             ], 401);
         }
 
-        $hasAccess = false;
-
-        try {
-            if ($user->hasRole('Super Admin')) {
-                $hasAccess = true;
-            } else {
-                // Support pipe-delimited permission names with OR semantics
-                $permissions = explode('|', $permission);
-                foreach ($permissions as $perm) {
-                    $trimmed = trim($perm);
-                    if ($user->can($trimmed) || (method_exists($user, 'hasPermissionTo') && ($user->hasPermissionTo($trimmed, 'web') || $user->hasPermissionTo($trimmed)))) {
-                        $hasAccess = true;
-                        break;
-                    }
-                }
-            }
-        } catch (\Throwable) {
-            $hasAccess = false;
-        }
-
-        if ($hasAccess) {
+        if (user_can($permission, $user)) {
             return $next($request);
         }
 

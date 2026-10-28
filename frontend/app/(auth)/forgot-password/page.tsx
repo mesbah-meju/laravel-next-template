@@ -7,6 +7,8 @@ import { authService } from '@/services/authService';
 import { useToast } from '@/hooks/useToast';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
+import { AuthFrame } from '@/components/auth/AuthFrame';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -23,70 +25,81 @@ export default function ForgotPasswordPage() {
     try {
       await authService.forgotPassword(email);
       setIsSubmitted(true);
-      toast.success('Reset Link Dispatched', 'Please check your email inbox.');
+      toast.success('Reset link sent', 'Please check your email inbox.');
     } catch (err: unknown) {
       const msg = (err as { message?: string })?.message || 'Failed to request password reset.';
       setError(msg);
-      toast.error('Request Failed', msg);
+      toast.error('Request failed', msg);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-      <div className="max-w-md w-full space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-            Forgot Password
+    <AuthFrame>
+      <div className="w-full max-w-md space-y-6">
+        <div className="space-y-2 text-center">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+            Reset password
           </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Enter your account email to receive a password reset link.
+          <p className="text-sm text-muted-foreground">
+            Enter your account email and we will send a reset link.
           </p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl space-y-6">
+        <div className="space-y-5 rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
           {isSubmitted ? (
-            <div className="text-center space-y-4 py-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-                <Mail className="w-6 h-6" />
+            <div className="space-y-4 py-2 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Mail className="h-6 w-6" />
               </div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Check Your Email</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                If an account exists for <strong className="text-gray-800 dark:text-gray-200">{email}</strong>, a password reset link has been dispatched.
+              <h3 className="font-display text-base font-semibold text-foreground">Check your email</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                If an account exists for <span className="font-medium text-foreground">{email}</span>, a
+                password reset link has been sent.
               </p>
-              <Link href="/admin-login">
-                <Button variant="outline" size="sm" className="mt-4">
-                  Back to Sign In
-                </Button>
-              </Link>
+              <Button asChild variant="outline" size="sm" className="mt-2">
+                <Link href="/admin-login">Back to sign in</Link>
+              </Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              <FormError message={error} />
+
               <Input
-                label="Account Email"
+                label="Email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                leftIcon={<Mail className="w-4 h-4" />}
-                error={error || undefined}
+                leftIcon={<Mail className="h-4 w-4" />}
+                autoComplete="email"
                 required
               />
 
-              <Button type="submit" variant="primary" size="lg" className="w-full" isLoading={isLoading}>
-                Send Reset Link <Send className="w-4 h-4 ml-1" />
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                isLoading={isLoading}
+                rightIcon={<Send className="h-4 w-4" />}
+              >
+                Send reset link
               </Button>
             </form>
           )}
         </div>
 
-        <div className="text-center text-xs text-gray-400">
-          <Link href="/admin-login" className="inline-flex items-center gap-1 hover:text-gray-600 dark:hover:text-gray-200 transition">
-            <ArrowLeft className="w-3.5 h-3.5" /> Return to Login
+        <div className="text-center">
+          <Link
+            href="/admin-login"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Return to login
           </Link>
         </div>
       </div>
-    </div>
+    </AuthFrame>
   );
 }

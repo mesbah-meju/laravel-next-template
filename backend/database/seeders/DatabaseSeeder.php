@@ -14,10 +14,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolePermissionSeeder::class,
             UserSeeder::class,
-            SettingSeeder::class,
-            MenuSeeder::class,
         ]);
-
-        \App\Services\Installer\InstallerService::lock();
     }
 }

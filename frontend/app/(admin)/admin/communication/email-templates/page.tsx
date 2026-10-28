@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Mail, Edit3, Eye, Send, Code, CheckCircle2, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
-import { DataTable, Column } from '@/components/admin/DataTable';
+import { DataTable, Column } from '@/components/ui/DataTable';
+import Link from 'next/link';
 import { Modal } from '@/components/admin/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -228,18 +229,31 @@ export default function EmailTemplatesPage() {
           title="Email Templates"
           description="Manage branded transactional email templates with strict variable safety."
           breadcrumbs={[
-            { label: 'Communication', href: '/admin/communication' },
+            { label: 'Communication', href: '/admin/communication/email-settings' },
             { label: 'Email Templates' },
           ]}
+          actions={
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/communication/email-settings">
+                <Mail className="mr-1.5 h-3.5 w-3.5" />
+                Email settings
+              </Link>
+            </Button>
+          }
         />
 
-        <div className="bg-card border border-border rounded-xl shadow-xs overflow-hidden">
-          <DataTable
-            columns={columns}
-            data={templates}
-            isLoading={isLoading}
-          />
-        </div>
+        <DataTable
+          columns={columns}
+          data={templates}
+          isLoading={isLoading}
+          enableColumnVisibility
+          enableExport
+          enableDensity
+          searchable
+          searchPlaceholder="Filter templates…"
+          exportFilename="email-templates"
+          striped
+        />
 
         {/* Edit Modal */}
         <Modal

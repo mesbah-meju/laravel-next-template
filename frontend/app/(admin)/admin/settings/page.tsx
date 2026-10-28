@@ -5,10 +5,8 @@ import {
   Globe,
   Image as ImageIcon,
   Languages,
-  Mail,
   Bell,
   Shield,
-  Send,
   Lock,
   Phone,
   MapPin,
@@ -16,7 +14,10 @@ import {
   Clock,
   Sparkles,
   Search as SearchIcon,
+  Mail,
+  Construction,
 } from 'lucide-react';
+import Link from 'next/link';
 import { settingService } from '@/services/settingService';
 import { useToast } from '@/hooks/useToast';
 import { PageHeader } from '@/components/admin/PageHeader';
@@ -24,7 +25,6 @@ import { PermissionGuard } from '@/components/admin/PermissionGuard';
 import { ImagePicker } from '@/components/admin/ImagePicker';
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { SeoPreview } from '@/components/admin/SeoPreview';
-import { Modal } from '@/components/admin/Modal';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -36,7 +36,6 @@ import { FormField } from '@/components/ui/FormField';
 import { SiteSettings } from '@/types/setting';
 import { useSettings } from '@/providers/SettingProvider';
 import { cn } from '@/lib/utils';
-
 import { moduleRegistry } from '@/lib/moduleRegistry';
 
 export default function SiteSettingsPage() {
@@ -59,19 +58,9 @@ export default function SiteSettingsPage() {
     currency_symbol: '$',
     default_meta_title: '',
     default_meta_description: '',
-    maintenance_mode: false,
-    // Email / SMTP
-    mail_mailer: 'smtp',
-    mail_host: '127.0.0.1',
-    mail_port: 1025,
-    mail_username: '',
-    mail_password: '',
-    mail_encryption: 'tls',
-    mail_from_address: 'hello@example.com',
-    mail_from_name: 'Starter App',
     // Notifications
-    notify_email_enabled: true,
     notify_database_enabled: true,
+    notify_email_enabled: true,
     notify_on_user_registered: true,
     notify_on_security_events: true,
     // Security
@@ -86,11 +75,6 @@ export default function SiteSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
-
-  // Test Email Modal
-  const [isTestEmailOpen, setIsTestEmailOpen] = useState(false);
-  const [testEmailAddress, setTestEmailAddress] = useState('');
-  const [isSendingTest, setIsSendingTest] = useState(false);
 
   const toast = useToast();
 
@@ -107,9 +91,6 @@ export default function SiteSettingsPage() {
                 ? (res.data.social_links as Record<string, string>)
                 : {},
           }));
-          if (res.data.site_email) {
-            setTestEmailAddress(res.data.site_email as string);
-          }
         }
       } catch {
         toast.error('Failed to load settings');
@@ -127,7 +108,12 @@ export default function SiteSettingsPage() {
     setIsSaving(true);
 
     try {
-      await settingService.updateAdminSettings(settings);
+      const {
+        maintenance_mode: _maintenanceMode,
+        maintenance_message: _maintenanceMessage,
+        ...safeSettings
+      } = settings;
+      await settingService.updateAdminSettings(safeSettings);
       await refreshSettings();
       toast.success('Settings Saved', 'Site configuration updated and cache invalidated.');
     } catch (err: unknown) {
@@ -139,28 +125,11 @@ export default function SiteSettingsPage() {
     }
   };
 
-  const handleSendTestEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!testEmailAddress) return;
-    setIsSendingTest(true);
-
-    try {
-      const res = await settingService.sendTestEmail(testEmailAddress);
-      toast.success('Email Dispatched', res.message || 'Test email dispatched.');
-      setIsTestEmailOpen(false);
-    } catch (err: unknown) {
-      toast.error('Test Email Failed', (err as { message?: string })?.message || 'Could not send test email.');
-    } finally {
-      setIsSendingTest(false);
-    }
-  };
-
   const coreTabs = [
     { id: 'general', label: 'General', icon: Globe },
     { id: 'branding', label: 'Branding', icon: ImageIcon },
     { id: 'seo', label: 'SEO & Metadata', icon: SearchIcon },
     { id: 'localization', label: 'Localization', icon: Languages },
-    { id: 'email', label: 'Email & SMTP', icon: Mail },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield },
   ];
@@ -187,19 +156,21 @@ export default function SiteSettingsPage() {
       <div className="space-y-6">
         <PageHeader
           title="Site Settings"
-          description="Configure brand identity, SEO defaults, localization formats, email transports, and security parameters."
+          description="Configure brand identity, SEO defaults, localization, notifications, and security. SMTP lives under Communication → Email Settings."
           actions={
             <div className="flex items-center gap-2">
-              {activeTab === 'email' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  onClick={() => setIsTestEmailOpen(true)}
-                >
-                  <Send className="w-3.5 h-3.5 mr-1.5" /> Send Test Email
-                </Button>
-              )}
+              <Button asChild variant="outline" size="sm">
+                <Link href="/admin/communication/email-settings">
+                  <Mail className="mr-1.5 h-3.5 w-3.5" />
+                  Email settings
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/admin/system/maintenance">
+                  <Construction className="mr-1.5 h-3.5 w-3.5" />
+                  Maintenance
+                </Link>
+              </Button>
               <SubmitButton onClick={handleSave} isLoading={isSaving} label="Save Settings" size="sm" />
             </div>
           }
@@ -291,13 +262,19 @@ export default function SiteSettingsPage() {
                     placeholder="© 2026 My SaaS Platform. All rights reserved."
                   />
 
-                  <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-                    <Switch
-                      label="Maintenance Mode"
-                      description="Temporarily disable public access for system maintenance."
-                      checked={Boolean(settings.maintenance_mode)}
-                      onChange={(checked) => setSettings({ ...settings, maintenance_mode: checked })}
-                    />
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 p-4">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Maintenance Mode</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Managed under System &amp; Tools so public access can be toggled without editing site branding.
+                      </p>
+                    </div>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/admin/system/maintenance">
+                        <Construction className="mr-1.5 h-3.5 w-3.5" />
+                        Open maintenance
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -557,91 +534,7 @@ export default function SiteSettingsPage() {
                 </div>
               )}
 
-              {/* 4. EMAIL & SMTP TAB */}
-              {activeTab === 'email' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">SMTP Transport Configuration</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Configure outbound mail server parameters and authentication.</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Select
-                      label="Mail Driver"
-                      options={[
-                        { label: 'SMTP', value: 'smtp' },
-                        { label: 'Sendmail', value: 'sendmail' },
-                        { label: 'Log (Testing)', value: 'log' },
-                      ]}
-                      value={(settings.mail_mailer as string) || 'smtp'}
-                      onChange={(e) => setSettings({ ...settings, mail_mailer: e.target.value })}
-                    />
-                    <div className="sm:col-span-2">
-                      <Input
-                        label="SMTP Host"
-                        value={(settings.mail_host as string) || ''}
-                        onChange={(e) => setSettings({ ...settings, mail_host: e.target.value })}
-                        placeholder="smtp.mailtrap.io"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Input
-                      label="SMTP Port"
-                      type="number"
-                      value={String(settings.mail_port || 587)}
-                      onChange={(e) => setSettings({ ...settings, mail_port: Number(e.target.value) })}
-                      placeholder="587"
-                    />
-                    <Select
-                      label="Encryption Scheme"
-                      options={[
-                        { label: 'TLS', value: 'tls' },
-                        { label: 'SSL', value: 'ssl' },
-                        { label: 'None', value: 'null' },
-                      ]}
-                      value={(settings.mail_encryption as string) || 'tls'}
-                      onChange={(e) => setSettings({ ...settings, mail_encryption: e.target.value })}
-                    />
-                    <Input
-                      label="Username"
-                      value={(settings.mail_username as string) || ''}
-                      onChange={(e) => setSettings({ ...settings, mail_username: e.target.value })}
-                      placeholder="smtp_username"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input
-                      label="Password"
-                      type="password"
-                      value={(settings.mail_password as string) || ''}
-                      onChange={(e) => setSettings({ ...settings, mail_password: e.target.value })}
-                      placeholder="••••••••"
-                      hint="Sensitive values are masked automatically."
-                    />
-                    <Input
-                      label="Sender From Email"
-                      type="email"
-                      value={(settings.mail_from_address as string) || ''}
-                      onChange={(e) => setSettings({ ...settings, mail_from_address: e.target.value })}
-                      placeholder="noreply@example.com"
-                    />
-                  </div>
-
-                  <Input
-                    label="Sender From Name"
-                    value={(settings.mail_from_name as string) || ''}
-                    onChange={(e) => setSettings({ ...settings, mail_from_name: e.target.value })}
-                    placeholder="My SaaS Platform"
-                  />
-                </div>
-              )}
-
-              {/* 5. NOTIFICATIONS TAB */}
+              {/* 4. NOTIFICATIONS TAB */}
               {activeTab === 'notifications' && (
                 <div className="space-y-4">
                   <div>
@@ -681,7 +574,7 @@ export default function SiteSettingsPage() {
                 </div>
               )}
 
-              {/* 6. SECURITY TAB */}
+              {/* 5. SECURITY TAB */}
               {activeTab === 'security' && (
                 <div className="space-y-4">
                   <div>
@@ -737,38 +630,6 @@ export default function SiteSettingsPage() {
         </div>
 
 
-        {/* Send Test Email Modal */}
-        <Modal
-          isOpen={isTestEmailOpen}
-          onClose={() => setIsTestEmailOpen(false)}
-          title="Send Test Email"
-          description="Send a verification email to ensure your SMTP configuration is functional."
-        >
-          <form onSubmit={handleSendTestEmail} className="space-y-4">
-            <Input
-              label="Recipient Email Address"
-              type="email"
-              value={testEmailAddress}
-              onChange={(e) => setTestEmailAddress(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                onClick={() => setIsTestEmailOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button variant="primary" size="sm" type="submit" isLoading={isSendingTest}>
-                <Send className="w-3.5 h-3.5 mr-1.5" /> Send Verification Email
-              </Button>
-            </div>
-          </form>
-        </Modal>
       </div>
     </PermissionGuard>
   );

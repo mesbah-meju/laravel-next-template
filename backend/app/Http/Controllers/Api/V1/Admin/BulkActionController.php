@@ -24,7 +24,7 @@ class BulkActionController extends Controller
 
         $available = [];
         foreach ($actions as $key => $action) {
-            if (empty($action['permission']) || $user->hasRole('Super Admin') || $user->can($action['permission'])) {
+            if (empty($action['permission']) || user_can($action['permission'], $user)) {
                 $available[] = [
                     'key' => $key,
                     'label' => $action['label'],
@@ -59,7 +59,7 @@ class BulkActionController extends Controller
         }
 
         $user = $request->user();
-        if (! empty($action['permission']) && ! $user->hasRole('Super Admin') && ! $user->can($action['permission'])) {
+        if (! empty($action['permission']) && ! user_can($action['permission'], $user)) {
             return $this->errorResponse('Unauthorized to execute this bulk action.', 403);
         }
 

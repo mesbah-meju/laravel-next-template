@@ -1,2 +1,3 @@
+# Laravel API host — do not index. Public SEO robots live on the Next.js frontend.
 User-agent: *
-Disallow:
+Disallow: /

@@ -96,11 +96,11 @@ export default function AdminDashboardPage() {
           title="Manage Dashboard"
           description="System overview, resource metrics, recent audit records, and quick management links."
           actions={
-            <Link href="/" target="_blank">
-              <Button variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/" target="_blank">
                 <ExternalLink className="w-4 h-4 mr-1.5" /> View Public Site
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           }
         />
 

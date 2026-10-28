@@ -92,6 +92,8 @@ class PermissionController extends Controller
             'manage-error-logs',
             'view-system-updates',
             'manage-system-updates',
+            'view-traffic',
+            'manage-traffic',
         ];
 
         if (in_array($permission->name, $corePermissions, true)) {

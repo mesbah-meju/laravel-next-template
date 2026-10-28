@@ -45,7 +45,7 @@ class ImpersonationController extends Controller
 
             return $this->successResponse($result, 'Impersonation ended. Returned to Super Admin account.');
         } catch (Exception $e) {
-            return $this->errorResponse($e->getMessage(), 400);
+            return $this->errorResponse($e->getMessage(), null, 400);
         }
     }
 

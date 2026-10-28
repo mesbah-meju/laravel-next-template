@@ -45,7 +45,9 @@ class MediaService
         $fileName = $safeName.'-'.time().'-'.Str::random(6).'.'.$extension;
 
         $path = $file->storeAs('media', $fileName, 'public');
-        $url = Storage::disk('public')->url($path);
+
+        // Store a same-origin relative URL so the Next.js /storage rewrite can serve files.
+        $url = '/storage/'.ltrim(str_replace('\\', '/', $path), '/');
 
         return Media::create([
             'name' => $originalClientName,

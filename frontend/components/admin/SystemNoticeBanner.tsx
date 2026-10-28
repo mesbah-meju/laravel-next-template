@@ -86,7 +86,7 @@ export function SystemNoticeBanner() {
   };
 
   return (
-    <div className="space-y-2 p-4 pb-0 max-w-7xl mx-auto w-full">
+    <div className="w-full space-y-2 p-4 pb-0">
       {visibleNotices.map((notice) => {
         const config = typeConfig[notice.type] || typeConfig.info;
         const Icon = config.icon;

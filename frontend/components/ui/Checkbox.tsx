@@ -52,9 +52,9 @@ export function Checkbox({
           className={cn(
             'mt-0.5 h-4 w-4 shrink-0 rounded-xs border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-2xs transition-colors flex items-center justify-center',
             'hover:border-gray-400 dark:hover:border-gray-600',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1',
-            'data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600',
-            'data-[state=indeterminate]:bg-indigo-600 data-[state=indeterminate]:border-indigo-600',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1',
+            'data-[state=checked]:bg-primary data-[state=checked]:border-primary',
+            'data-[state=indeterminate]:bg-primary data-[state=indeterminate]:border-primary',
             'disabled:cursor-not-allowed',
             errorMessage && 'border-rose-500'
           )}

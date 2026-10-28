@@ -24,6 +24,37 @@ const SettingContext = createContext<SettingContextType>({
   refreshSettings: async () => {},
 });
 
+const APP_FAVICON_ATTR = 'data-app-favicon';
+
+function upsertAppFavicon(faviconUrl: string) {
+  if (typeof document === 'undefined') return;
+
+  // Never remove Next.js / React-managed <link rel="icon"> nodes.
+  // Mutating those causes: Cannot read properties of null (reading 'removeChild').
+  let link = document.head.querySelector<HTMLLinkElement>(`link[${APP_FAVICON_ATTR}="true"]`);
+
+  if (!link) {
+    link = document.createElement('link');
+    link.setAttribute(APP_FAVICON_ATTR, 'true');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+
+  link.type = faviconUrl.endsWith('.svg')
+    ? 'image/svg+xml'
+    : faviconUrl.endsWith('.png')
+      ? 'image/png'
+      : 'image/x-icon';
+  link.href = faviconUrl;
+}
+
+function removeAppFavicon() {
+  if (typeof document === 'undefined') return;
+  document.head.querySelectorAll(`link[${APP_FAVICON_ATTR}="true"]`).forEach((el) => {
+    el.parentNode?.removeChild(el);
+  });
+}
+
 export function SettingProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -38,7 +69,7 @@ export function SettingProvider({ children }: { children: React.ReactNode }) {
         }));
       }
     } catch {
-      // Fallback
+      // Keep defaults when the API is unavailable
     } finally {
       setIsLoading(false);
     }
@@ -48,34 +79,11 @@ export function SettingProvider({ children }: { children: React.ReactNode }) {
     refreshSettings();
   }, [refreshSettings]);
 
-  // Synchronize document favicon and head icons dynamically
   useEffect(() => {
-    if (typeof document === 'undefined') return;
-
     if (settings.site_favicon) {
-      const faviconUrl = settings.site_favicon;
-      const existingIcons = document.querySelectorAll("link[rel*='icon'], link[rel='apple-touch-icon']");
-      existingIcons.forEach((el) => el.remove());
-
-      const icon = document.createElement('link');
-      icon.rel = 'icon';
-      icon.type = faviconUrl.endsWith('.svg')
-        ? 'image/svg+xml'
-        : faviconUrl.endsWith('.png')
-        ? 'image/png'
-        : 'image/x-icon';
-      icon.href = faviconUrl;
-      document.head.appendChild(icon);
-
-      const shortcut = document.createElement('link');
-      shortcut.rel = 'shortcut icon';
-      shortcut.href = faviconUrl;
-      document.head.appendChild(shortcut);
-
-      const apple = document.createElement('link');
-      apple.rel = 'apple-touch-icon';
-      apple.href = faviconUrl;
-      document.head.appendChild(apple);
+      upsertAppFavicon(settings.site_favicon);
+    } else {
+      removeAppFavicon();
     }
   }, [settings.site_favicon]);
 

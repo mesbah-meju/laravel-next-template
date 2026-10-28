@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -9,18 +9,19 @@ import {
   Tablet,
   Globe,
   User as UserIcon,
-  Calendar,
 } from 'lucide-react';
 import { securityService } from '@/services/securityService';
 import { useToast } from '@/hooks/useToast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PageHeader } from '@/components/admin/PageHeader';
-import { DataTable, Column } from '@/components/admin/DataTable';
-import { Pagination } from '@/components/admin/Pagination';
-import { SearchInput } from '@/components/admin/SearchInput';
-import { FilterBar } from '@/components/admin/FilterBar';
+import {
+  DataTable,
+  Column,
+  type DataTableFilterDef,
+  type DataTableFilterValue,
+} from '@/components/admin/DataTable';
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
-import { Select, DateRangePicker, DateRange } from '@/components/ui';
+import { type DateRange } from '@/components/ui';
 import { formatDate } from '@/lib/utils';
 import { LoginHistoryItem } from '@/types/security';
 import { PaginationMeta } from '@/types/api';
@@ -184,6 +185,48 @@ export default function LoginHistoryPage() {
     },
   ];
 
+  const tableFilters: DataTableFilterDef[] = useMemo(
+    () => [
+      {
+        id: 'status',
+        label: 'Status',
+        type: 'select',
+        placeholder: 'Any status',
+        options: [
+          { label: 'Successful', value: 'successful' },
+          { label: 'Failed', value: 'failed' },
+          { label: 'Throttled', value: 'throttled' },
+          { label: 'Blocked', value: 'blocked' },
+        ],
+      },
+      {
+        id: 'device',
+        label: 'Device',
+        type: 'select',
+        placeholder: 'Any device',
+        options: [
+          { label: 'Desktop', value: 'Desktop' },
+          { label: 'Mobile', value: 'Mobile' },
+          { label: 'Tablet', value: 'Tablet' },
+        ],
+      },
+      {
+        id: 'date_range',
+        label: 'Date range',
+        type: 'date-range',
+        placeholder: 'Filter by date range…',
+      },
+    ],
+    []
+  );
+
+  const handleFilterChange = (id: string, value: DataTableFilterValue) => {
+    if (id === 'status') setStatusFilter(typeof value === 'string' ? value : '');
+    if (id === 'device') setDeviceFilter(typeof value === 'string' ? value : '');
+    if (id === 'date_range') setDateRange((value as DateRange | null) ?? null);
+    setPage(1);
+  };
+
   return (
     <PermissionGuard permission="view-login-history">
       <div className="space-y-6">
@@ -192,79 +235,37 @@ export default function LoginHistoryPage() {
           description="Inspect successful sign-ins, failed credential attempts, and device origins."
         />
 
-        {/* Filter Bar */}
-        <FilterBar
-          hasActiveFilters={!!search || !!statusFilter || !!deviceFilter || !!dateRange?.from}
-          onReset={() => {
-            setSearch('');
-            setStatusFilter('');
-            setDeviceFilter('');
-            setDateRange(null);
-            setPage(1);
-          }}
-        >
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search email, IP, browser..."
-          />
-
-          <div className="w-36">
-            <Select
-              options={[
-                { label: 'All Statuses', value: '' },
-                { label: 'Successful', value: 'successful' },
-                { label: 'Failed', value: 'failed' },
-                { label: 'Throttled', value: 'throttled' },
-                { label: 'Blocked', value: 'blocked' },
-              ]}
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-
-          <div className="w-36">
-            <Select
-              options={[
-                { label: 'All Devices', value: '' },
-                { label: 'Desktop', value: 'Desktop' },
-                { label: 'Mobile', value: 'Mobile' },
-                { label: 'Tablet', value: 'Tablet' },
-              ]}
-              value={deviceFilter}
-              onChange={(e) => {
-                setDeviceFilter(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-
-          <div className="w-64">
-            <DateRangePicker
-              value={dateRange}
-              onChange={(range) => {
-                setDateRange(range);
-                setPage(1);
-              }}
-              placeholder="Filter by date range..."
-            />
-          </div>
-        </FilterBar>
-
-        {/* Data Table */}
         <DataTable
           columns={columns}
           data={history}
           isLoading={isLoading}
           emptyTitle="No login history records"
           emptyDescription="Authentication attempts will be logged automatically as users log in."
+          searchValue={search}
+          onSearchChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          searchPlaceholder="Search email, IP, browser…"
+          filters={tableFilters}
+          filterValues={{
+            status: statusFilter,
+            device: deviceFilter,
+            date_range: dateRange,
+          }}
+          onFilterChange={handleFilterChange}
+          onFiltersReset={() => {
+            setStatusFilter('');
+            setDeviceFilter('');
+            setDateRange(null);
+            setPage(1);
+          }}
+          pagination={meta}
+          onPageChange={setPage}
+          enableColumnVisibility
+          enableExport
+          exportFilename="login-history"
         />
-
-        {/* Pagination */}
-        <Pagination meta={meta} onPageChange={setPage} />
       </div>
     </PermissionGuard>
   );

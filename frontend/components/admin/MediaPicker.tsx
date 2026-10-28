@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { FileUploader } from './FileUploader';
 import { useToast } from '@/hooks/useToast';
 import { useDebounce } from '@/hooks/useDebounce';
-import { cn } from '@/lib/utils';
+import { cn, mediaUrl } from '@/lib/utils';
 
 export interface MediaPickerProps {
   isOpen: boolean;
@@ -141,13 +141,16 @@ export function MediaPicker({
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-[420px] overflow-y-auto p-1">
                 {mediaList.map((item) => {
-                  const isSelected = selectedMedia?.id === item.id || (!selectedMedia && selectedUrl === item.url);
+                  const url = mediaUrl(item.url);
+                  const isSelected =
+                    selectedMedia?.id === item.id ||
+                    (!selectedMedia && mediaUrl(selectedUrl) === url);
                   const isImage = item.mime_type.startsWith('image/');
 
                   return (
                     <div
                       key={item.id}
-                      onClick={() => setSelectedMedia(item)}
+                      onClick={() => setSelectedMedia({ ...item, url })}
                       className={cn(
                         'group relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all duration-150 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800/40',
                         isSelected
@@ -157,7 +160,7 @@ export function MediaPicker({
                     >
                       {isImage ? (
                         <img
-                          src={item.url}
+                          src={url}
                           alt={item.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
                         />

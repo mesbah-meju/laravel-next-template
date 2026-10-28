@@ -66,7 +66,7 @@ class ImportExportController extends Controller
         }
 
         // Authorize
-        if (! empty($definition['permission']) && ! $request->user()->can($definition['permission']) && ! $request->user()->hasRole('Super Admin')) {
+        if (! empty($definition['permission']) && ! user_can($definition['permission'], $request->user())) {
             return $this->errorResponse('Unauthorized to import this resource.', 403);
         }
 
@@ -203,7 +203,7 @@ class ImportExportController extends Controller
     {
         $query = Import::with('user:id,name,email');
 
-        if (! $request->user()?->hasRole('Super Admin') && ! $request->user()?->can('manage-imports')) {
+        if (! user_can('manage-imports', $request->user())) {
             $query->where('user_id', $request->user()?->id);
         }
 
@@ -260,7 +260,7 @@ class ImportExportController extends Controller
             return $this->errorResponse("Unknown export type: {$key}", 404);
         }
 
-        if (! empty($definition['permission']) && ! $request->user()->can($definition['permission']) && ! $request->user()->hasRole('Super Admin')) {
+        if (! empty($definition['permission']) && ! user_can($definition['permission'], $request->user())) {
             return $this->errorResponse('Unauthorized to export this resource.', 403);
         }
 
@@ -282,7 +282,7 @@ class ImportExportController extends Controller
             abort(401, 'Unauthenticated.');
         }
 
-        if ($import->user_id !== $user->id && ! $user->hasRole('Super Admin') && ! $user->can('manage-imports')) {
+        if ($import->user_id !== $user->id && ! user_can('manage-imports', $user)) {
             abort(403, 'Unauthorized access to this import resource.');
         }
     }

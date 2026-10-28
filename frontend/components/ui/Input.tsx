@@ -11,7 +11,7 @@ const inputVariants = cva(
     'flex h-9 sm:h-10 w-full rounded-md border bg-white dark:bg-gray-950 px-3 py-1 text-sm',
     'text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500',
     'shadow-2xs transition-colors',
-    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:border-indigo-500',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-primary',
     'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50 dark:disabled:bg-gray-900',
   ],
   {

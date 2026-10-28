@@ -12,6 +12,11 @@ export interface ImpersonateResponse {
   };
 }
 
+export interface StopImpersonationResponse {
+  token?: string;
+  user: User;
+}
+
 export const impersonationService = {
   async start(userId: number): Promise<ImpersonateResponse> {
     const res = await apiClient.post<ApiResponse<ImpersonateResponse>>(
@@ -19,7 +24,6 @@ export const impersonationService = {
     );
     if (res.data?.data) {
       const data = res.data.data;
-      // Save original admin details before switching token
       const existingAdmin = localStorage.getItem('auth_user');
       if (existingAdmin && !localStorage.getItem('impersonation_original_admin')) {
         localStorage.setItem('impersonation_original_admin', existingAdmin);
@@ -32,15 +36,20 @@ export const impersonationService = {
     throw new Error(res.data?.message || 'Failed to start impersonation');
   },
 
-  async stop(): Promise<{ token: string; user: User }> {
-    const res = await apiClient.post<ApiResponse<{ token: string; user: User }>>(
+  async stop(): Promise<StopImpersonationResponse> {
+    const res = await apiClient.post<ApiResponse<StopImpersonationResponse>>(
       '/api/v1/admin/impersonate/stop/session'
     );
     if (res.data?.data) {
       const data = res.data.data;
       localStorage.removeItem('impersonation_active');
       localStorage.removeItem('impersonation_original_admin');
-      localStorage.setItem('auth_token', data.token);
+      // Session restore may omit token; only overwrite when backend returns one.
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+      } else {
+        localStorage.removeItem('auth_token');
+      }
       localStorage.setItem('auth_user', JSON.stringify(data.user));
       return data;
     }

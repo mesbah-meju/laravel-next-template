@@ -2,6 +2,7 @@ import api from '@/lib/api';
 import {
   UpdateStatusResponse,
   SystemUpdateHistory,
+  UpdateComponent,
 } from '@/types/update';
 
 export const updateService = {
@@ -10,12 +11,18 @@ export const updateService = {
     return res.data;
   },
 
-  executeUpdate: async (version: string): Promise<{ success: boolean; message: string; data: SystemUpdateHistory }> => {
-    const res = await api.post('/api/v1/admin/system/updates/execute', { version });
+  executeUpdate: async (payload?: {
+    version?: string;
+    components?: UpdateComponent[];
+  }): Promise<{ success: boolean; message: string; data: SystemUpdateHistory }> => {
+    const res = await api.post('/api/v1/admin/system/updates/execute', payload ?? {});
     return res.data;
   },
 
-  getHistory: async (page = 1, perPage = 15): Promise<{ success: boolean; data: SystemUpdateHistory[]; pagination: { total: number } }> => {
+  getHistory: async (
+    page = 1,
+    perPage = 15
+  ): Promise<{ success: boolean; data: SystemUpdateHistory[]; pagination: { total: number } }> => {
     const res = await api.get(`/api/v1/admin/system/updates/history?page=${page}&per_page=${perPage}`);
     return res.data;
   },

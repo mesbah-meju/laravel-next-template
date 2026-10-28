@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Activity,
   Eye,
@@ -8,8 +8,6 @@ import {
   Calendar,
   Layers,
   User as UserIcon,
-  Search,
-  Filter,
   ArrowRight,
   ShieldAlert,
 } from 'lucide-react';
@@ -18,29 +16,24 @@ import { useToast } from '@/hooks/useToast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { usePermission } from '@/hooks/usePermission';
 import { PageHeader } from '@/components/admin/PageHeader';
-import { DataTable, Column } from '@/components/admin/DataTable';
-import { Pagination } from '@/components/admin/Pagination';
-import { SearchInput } from '@/components/admin/SearchInput';
-import { FilterBar } from '@/components/admin/FilterBar';
+import {
+  DataTable,
+  Column,
+  type DataTableFilterDef,
+  type DataTableFilterValue,
+} from '@/components/admin/DataTable';
 import { Modal } from '@/components/admin/Modal';
 import { ConfirmationDialog } from '@/components/admin/ConfirmationDialog';
 import { PermissionGuard } from '@/components/admin/PermissionGuard';
-import { Button, Select, DateRangePicker, DateRange } from '@/components/ui';
-import { formatDate } from '@/lib/utils';
+import { Button, Select, type DateRange } from '@/components/ui';
+import { compactParams, emptyDisplay, emptyPaginationMeta, formatDate, toDateParam } from '@/lib/utils';
 import { ActivityLog } from '@/types/activityLog';
 import { PaginationMeta } from '@/types/api';
 
 export default function ActivityLogsPage() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [modules, setModules] = useState<string[]>([]);
-  const [meta, setMeta] = useState<PaginationMeta>({
-    total: 0,
-    count: 0,
-    per_page: 15,
-    current_page: 1,
-    total_pages: 1,
-    has_more: false,
-  });
+  const [meta, setMeta] = useState<PaginationMeta>(emptyPaginationMeta());
 
   const [search, setSearch] = useState('');
   const [moduleFilter, setModuleFilter] = useState('');
@@ -60,23 +53,22 @@ export default function ActivityLogsPage() {
 
   const debouncedSearch = useDebounce(search, 300);
   const toast = useToast();
-  const { can, isSuperAdmin } = usePermission();
+  const { canManage } = usePermission();
 
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
-      const start_date = dateRange?.from ? dateRange.from.toISOString().split('T')[0] : undefined;
-      const end_date = dateRange?.to ? dateRange.to.toISOString().split('T')[0] : undefined;
-
-      const res = await activityLogService.getLogs({
-        search: debouncedSearch || undefined,
-        module: moduleFilter || undefined,
-        action: actionFilter || undefined,
-        start_date,
-        end_date,
-        page,
-        per_page: 15,
-      });
+      const res = await activityLogService.getLogs(
+        compactParams({
+          search: debouncedSearch,
+          module: moduleFilter,
+          action: actionFilter,
+          start_date: toDateParam(dateRange?.from),
+          end_date: toDateParam(dateRange?.to),
+          page,
+          per_page: 15,
+        })
+      );
       setLogs(res.data);
       setMeta(res.pagination);
     } catch {
@@ -218,7 +210,7 @@ export default function ActivityLogsPage() {
       header: 'IP / Origin',
       render: (log) => (
         <span className="text-xs font-mono text-gray-500 dark:text-gray-400">
-          {log.ip_address || '—'}
+          {emptyDisplay(log.ip_address)}
         </span>
       ),
     },
@@ -245,6 +237,48 @@ export default function ActivityLogsPage() {
     },
   ];
 
+  const tableFilters: DataTableFilterDef[] = useMemo(
+    () => [
+      {
+        id: 'module',
+        label: 'Module',
+        type: 'select',
+        placeholder: 'Any module',
+        options: modules.map((m) => ({ label: m.toUpperCase(), value: m })),
+      },
+      {
+        id: 'action',
+        label: 'Action',
+        type: 'select',
+        placeholder: 'Any action',
+        options: [
+          { label: 'Created', value: 'created' },
+          { label: 'Updated', value: 'updated' },
+          { label: 'Deleted', value: 'deleted' },
+          { label: 'Status Changed', value: 'status_changed' },
+          { label: 'Login', value: 'login' },
+          { label: 'Logout', value: 'logout' },
+          { label: 'Failed Login', value: 'failed_login' },
+          { label: 'Uploaded', value: 'uploaded' },
+        ],
+      },
+      {
+        id: 'date_range',
+        label: 'Date range',
+        type: 'date-range',
+        placeholder: 'Filter by date range…',
+      },
+    ],
+    [modules]
+  );
+
+  const handleFilterChange = (id: string, value: DataTableFilterValue) => {
+    if (id === 'module') setModuleFilter(typeof value === 'string' ? value : '');
+    if (id === 'action') setActionFilter(typeof value === 'string' ? value : '');
+    if (id === 'date_range') setDateRange((value as DateRange | null) ?? null);
+    setPage(1);
+  };
+
   return (
     <PermissionGuard permission="view-activity-logs">
       <div className="space-y-6">
@@ -252,7 +286,7 @@ export default function ActivityLogsPage() {
           title="Activity & Audit Logs"
           description="Track administrative actions, security events, model mutations, and system state modifications."
           actions={
-            (isSuperAdmin() || can('manage-activity-logs')) && (
+            canManage('manage-activity-logs') && (
               <Button variant="outline" size="sm" onClick={() => setIsClearOpen(true)}>
                 <Trash2 className="w-4 h-4 mr-1.5 text-rose-500" /> Purge Logs
               </Button>
@@ -260,81 +294,37 @@ export default function ActivityLogsPage() {
           }
         />
 
-        {/* Filter Bar */}
-        <FilterBar
-          hasActiveFilters={!!search || !!moduleFilter || !!actionFilter || !!dateRange?.from}
-          onReset={() => {
-            setSearch('');
-            setModuleFilter('');
-            setActionFilter('');
-            setDateRange(null);
-            setPage(1);
-          }}
-        >
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search description, user, IP..."
-          />
-
-          <div className="w-36">
-            <Select
-              options={[
-                { label: 'All Modules', value: '' },
-                ...modules.map((m) => ({ label: m.toUpperCase(), value: m })),
-              ]}
-              value={moduleFilter}
-              onChange={(e) => {
-                setModuleFilter(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-
-          <div className="w-36">
-            <Select
-              options={[
-                { label: 'All Actions', value: '' },
-                { label: 'Created', value: 'created' },
-                { label: 'Updated', value: 'updated' },
-                { label: 'Deleted', value: 'deleted' },
-                { label: 'Status Changed', value: 'status_changed' },
-                { label: 'Login', value: 'login' },
-                { label: 'Logout', value: 'logout' },
-                { label: 'Failed Login', value: 'failed_login' },
-                { label: 'Uploaded', value: 'uploaded' },
-              ]}
-              value={actionFilter}
-              onChange={(e) => {
-                setActionFilter(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-
-          <div className="w-64">
-            <DateRangePicker
-              value={dateRange}
-              onChange={(range) => {
-                setDateRange(range);
-                setPage(1);
-              }}
-              placeholder="Filter by date range..."
-            />
-          </div>
-        </FilterBar>
-
-        {/* Data Table */}
         <DataTable
           columns={columns}
           data={logs}
           isLoading={isLoading}
           emptyTitle="No activity logs found"
           emptyDescription="Audit records will be automatically logged when administrative or security operations take place."
+          searchValue={search}
+          onSearchChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+          searchPlaceholder="Search description, user, IP…"
+          filters={tableFilters}
+          filterValues={{
+            module: moduleFilter,
+            action: actionFilter,
+            date_range: dateRange,
+          }}
+          onFilterChange={handleFilterChange}
+          onFiltersReset={() => {
+            setModuleFilter('');
+            setActionFilter('');
+            setDateRange(null);
+            setPage(1);
+          }}
+          pagination={meta}
+          onPageChange={setPage}
+          enableColumnVisibility
+          enableExport
+          exportFilename="activity-logs"
         />
-
-        {/* Pagination */}
-        <Pagination meta={meta} onPageChange={setPage} />
 
         {/* View Details Modal */}
         <Modal
@@ -361,7 +351,7 @@ export default function ActivityLogsPage() {
                 </div>
                 <div>
                   <span className="text-gray-400 block font-medium">IP Address</span>
-                  <p className="font-mono text-gray-700 dark:text-gray-300 mt-0.5">{selectedLog.ip_address || '—'}</p>
+                  <p className="font-mono text-gray-700 dark:text-gray-300 mt-0.5">{emptyDisplay(selectedLog.ip_address)}</p>
                 </div>
                 <div>
                   <span className="text-gray-400 block font-medium">Timestamp</span>

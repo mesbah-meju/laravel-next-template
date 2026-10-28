@@ -1,5 +1,5 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Plus_Jakarta_Sans, Instrument_Sans } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import { AuthProvider } from '@/providers/AuthProvider';
@@ -7,54 +7,31 @@ import { ToastProvider } from '@/providers/ToastProvider';
 import { SettingProvider } from '@/providers/SettingProvider';
 import { LocaleProvider } from '@/providers/LocaleProvider';
 import { BreadcrumbProvider } from '@/providers/BreadcrumbProvider';
+import { buildPageMetadata } from '@/lib/seo';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const sans = Instrument_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const display = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0c12' },
+  ],
+};
 
 export async function generateMetadata(): Promise<Metadata> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-  try {
-    const res = await fetch(`${apiUrl}/api/v1/public/settings`, {
-      cache: 'no-store',
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      const settings = data?.data || {};
-      const siteName = settings.site_name || 'Laravel + Next.js Starter';
-      const favicon = settings.site_favicon;
-
-      return {
-        title: {
-          default: siteName,
-          template: `%s | ${siteName}`,
-        },
-        description: settings.site_description || 'Production-ready full-stack architecture.',
-        icons: favicon
-          ? {
-              icon: favicon,
-              shortcut: favicon,
-              apple: favicon,
-            }
-          : {
-              icon: '/favicon.ico',
-            },
-      };
-    }
-  } catch {
-    // Fallback if backend server is starting
-  }
-
-  return {
-    title: {
-      default: 'Laravel + Next.js Starter',
-      template: '%s | Laravel + Next.js Starter',
-    },
-    description: 'Production-ready full-stack starter template.',
-    icons: {
-      icon: '/favicon.ico',
-    },
-  };
+  return buildPageMetadata({ root: true });
 }
 
 export default function RootLayout({
@@ -63,9 +40,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
-      <body suppressHydrationWarning className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans antialiased transition-colors duration-200">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${display.variable}`}>
+      <body
+        suppressHydrationWarning
+        className="min-h-screen bg-background font-sans text-foreground antialiased transition-colors duration-200"
+      >
+        <ThemeProvider>
           <LocaleProvider>
             <AuthProvider>
               <SettingProvider>

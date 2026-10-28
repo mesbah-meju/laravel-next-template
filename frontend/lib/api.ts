@@ -1,6 +1,13 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { getBrowserApiBaseUrl } from '@/lib/env';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+/**
+ * Prefer same-origin (empty base URL) so Sanctum XSRF cookies are readable.
+ * Next.js rewrites proxy /api, /sanctum, and /storage to Laravel.
+ * On the server, resolve to BACKEND_URL so SSR/SEO fetches work.
+ * Set NEXT_PUBLIC_API_URL only when intentionally calling the API cross-origin.
+ */
+const API_BASE_URL = getBrowserApiBaseUrl();
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -9,7 +16,7 @@ export const apiClient: AxiosInstance = axios.create({
   xsrfHeaderName: 'X-XSRF-TOKEN',
   headers: {
     'X-Requested-With': 'XMLHttpRequest',
-    'Accept': 'application/json',
+    Accept: 'application/json',
     'Content-Type': 'application/json',
   },
 });

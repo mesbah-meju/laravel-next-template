@@ -1,4 +1,8 @@
-import React from 'react';
+/**
+ * Server-Component JSON-LD helper.
+ * Do NOT use next/script here — that mounts a client-managed <script>
+ * and triggers React 19 removeChild crashes during navigation/HMR.
+ */
 
 export interface OrganizationSchema {
   type: 'Organization';
@@ -60,7 +64,7 @@ export type StructuredDataSchema =
   | ArticleSchema
   | FaqPageSchema;
 
-export function JsonLd({ schema }: { schema: StructuredDataSchema }) {
+export function buildJsonLd(schema: StructuredDataSchema): Record<string, unknown> {
   let jsonLdObject: Record<string, unknown> = {
     '@context': 'https://schema.org',
   };
@@ -78,7 +82,7 @@ export function JsonLd({ schema }: { schema: StructuredDataSchema }) {
           contactPoint: {
             '@type': 'ContactPoint',
             telephone: schema.contactPoint.telephone,
-            contactType: schema.contactPoint.contactType || 'customer support',
+            contactType: schema.contactPoint.contactType || 'customer service',
             email: schema.contactPoint.email,
           },
         }),
@@ -94,10 +98,7 @@ export function JsonLd({ schema }: { schema: StructuredDataSchema }) {
         ...(schema.searchUrlTemplate && {
           potentialAction: {
             '@type': 'SearchAction',
-            target: {
-              '@type': 'EntryPoint',
-              urlTemplate: schema.searchUrlTemplate,
-            },
+            target: schema.searchUrlTemplate,
             'query-input': 'required name=search_term_string',
           },
         }),
@@ -132,9 +133,9 @@ export function JsonLd({ schema }: { schema: StructuredDataSchema }) {
         '@type': schema.type,
         headline: schema.headline,
         description: schema.description,
-        ...(schema.image && { image: schema.image }),
         datePublished: schema.datePublished,
-        dateModified: schema.dateModified || schema.datePublished,
+        ...(schema.dateModified && { dateModified: schema.dateModified }),
+        ...(schema.image && { image: schema.image }),
         author: {
           '@type': 'Person',
           name: schema.authorName,
@@ -168,10 +169,20 @@ export function JsonLd({ schema }: { schema: StructuredDataSchema }) {
       break;
   }
 
+  return jsonLdObject;
+}
+
+/**
+ * Renders JSON-LD for Server Components only.
+ * React 19 hoists this into <head>; keep it out of Client Components.
+ */
+export function JsonLd({ schema }: { schema: StructuredDataSchema }) {
+  const payload = JSON.stringify(buildJsonLd(schema)).replace(/</g, '\\u003c');
+
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdObject) }}
+      dangerouslySetInnerHTML={{ __html: payload }}
     />
   );
 }

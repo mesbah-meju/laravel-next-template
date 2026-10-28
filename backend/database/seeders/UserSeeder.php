@@ -4,30 +4,50 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
 class UserSeeder extends Seeder
 {
+    /**
+     * Seed the default Super Admin account.
+     * Safe to re-run (idempotent) — will not overwrite an existing password.
+     */
     public function run(): void
     {
-        $superAdminRole = Role::where('name', 'Super Admin')->first();
+        if (Role::query()->where('name', 'Super Admin')->where('guard_name', 'web')->doesntExist()) {
+            $this->call(RolePermissionSeeder::class);
+        }
 
-        $adminEmail = env('DEFAULT_ADMIN_EMAIL', 'admin@example.com');
-        $adminPassword = env('DEFAULT_ADMIN_PASSWORD', 'password');
+        $email = (string) env('DEFAULT_ADMIN_EMAIL', 'admin@example.com');
+        $name = (string) env('DEFAULT_ADMIN_NAME', 'System Administrator');
+        $password = (string) env('DEFAULT_ADMIN_PASSWORD', 'password');
 
-        $user = User::firstOrCreate(
-            ['email' => $adminEmail],
+        $admin = User::query()->firstOrCreate(
+            ['email' => $email],
             [
-                'name' => 'System Administrator',
-                'password' => Hash::make($adminPassword),
+                'name' => $name,
+                'password' => $password, // hashed via User model cast
                 'status' => 'active',
                 'email_verified_at' => now(),
             ]
         );
 
-        if ($superAdminRole) {
-            $user->assignRole($superAdminRole);
+        // Keep existing accounts aligned with expected admin defaults.
+        $dirty = false;
+        if ($admin->status !== 'active') {
+            $admin->status = 'active';
+            $dirty = true;
+        }
+        if ($admin->email_verified_at === null) {
+            $admin->email_verified_at = now();
+            $dirty = true;
+        }
+        if ($dirty) {
+            $admin->save();
+        }
+
+        if (! $admin->hasRole('Super Admin')) {
+            $admin->syncRoles(['Super Admin']);
         }
     }
 }
