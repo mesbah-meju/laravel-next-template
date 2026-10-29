@@ -59,6 +59,12 @@ class PermissionCatalog
             'manage-system-updates',
             'view-traffic',
             'manage-traffic',
+            'view-posts',
+            'manage-posts',
+            'publish-posts',
+            'view-schedules',
+            'manage-schedules',
+            'manage-maintenance',
         ];
     }
 
@@ -90,6 +96,11 @@ class PermissionCatalog
             'view-error-logs',
             'view-system-updates',
             'view-traffic',
+            'view-posts',
+            'manage-posts',
+            'publish-posts',
+            'view-schedules',
+            'manage-maintenance',
         ];
     }
 

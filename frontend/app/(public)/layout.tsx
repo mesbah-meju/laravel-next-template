@@ -8,6 +8,7 @@ import { settingService } from '@/services/settingService';
 import { MenuItem } from '@/types/menu';
 import { SiteSettings } from '@/types/setting';
 import {
+  getPublicMaintenanceState,
   getPublicSeoSettings,
   isSeoFlagEnabled,
   parseSocialLinks,
@@ -27,6 +28,24 @@ export default async function PublicLayout({
   let footerItems: MenuItem[] = [];
   let settings: SiteSettings = {};
 
+  // Maintenance must bypass the 60s layout revalidate window.
+  const maintenance = await getPublicMaintenanceState();
+  if (maintenance.enabled) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <main className="flex-1">
+          <ErrorState
+            code={503}
+            description={maintenance.message}
+            showHome={false}
+            showBack={false}
+            showDashboard
+          />
+        </main>
+      </div>
+    );
+  }
+
   try {
     const [headerRes, footerRes, settingsRes] = await Promise.allSettled([
       menuService.getPublicMenu('header'),
@@ -45,32 +64,6 @@ export default async function PublicLayout({
     }
   } catch {
     // Fallback if backend is not yet booted during static generation
-  }
-
-  const maintenanceEnabled = isSeoFlagEnabled(
-    settings.maintenance_mode as string | boolean | null | undefined,
-    false
-  );
-
-  if (maintenanceEnabled) {
-    const maintenanceMessage =
-      typeof settings.maintenance_message === 'string' && settings.maintenance_message.trim()
-        ? settings.maintenance_message.trim()
-        : undefined;
-
-    return (
-      <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <main className="flex-1">
-          <ErrorState
-            code={503}
-            description={maintenanceMessage}
-            showHome={false}
-            showBack={false}
-            showDashboard
-          />
-        </main>
-      </div>
-    );
   }
 
   if (headerItems.length === 0) {

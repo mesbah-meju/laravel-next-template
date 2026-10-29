@@ -10,11 +10,14 @@ use App\Http\Controllers\Api\V1\Admin\ImpersonationController;
 use App\Http\Controllers\Api\V1\Admin\ImportExportController;
 use App\Http\Controllers\Api\V1\Admin\JobController;
 use App\Http\Controllers\Api\V1\Admin\LogViewerController;
+use App\Http\Controllers\Api\V1\Admin\MaintenanceController;
 use App\Http\Controllers\Api\V1\Admin\MediaController as AdminMediaController;
+use App\Http\Controllers\Api\V1\Admin\ScheduledTaskController;
 use App\Http\Controllers\Api\V1\Admin\MenuController as AdminMenuController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController;
 use App\Http\Controllers\Api\V1\Admin\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
+use App\Http\Controllers\Api\V1\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Api\V1\Admin\RedirectController;
 use App\Http\Controllers\Api\V1\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Api\V1\Admin\SecurityController;
@@ -30,6 +33,7 @@ use App\Http\Controllers\Api\V1\Auth\ProfileController;
 use App\Http\Controllers\Api\V1\InstallerController;
 use App\Http\Controllers\Api\V1\Public\HealthController;
 use App\Http\Controllers\Api\V1\Public\MenuController as PublicMenuController;
+use App\Http\Controllers\Api\V1\Public\PostController as PublicPostController;
 use App\Http\Controllers\Api\V1\Public\SettingController as PublicSettingController;
 use App\Http\Controllers\Api\V1\Public\TrafficController as PublicTrafficController;
 use App\Services\Seo\SeoAuditService;
@@ -52,6 +56,8 @@ Route::prefix('v1')->group(function () {
         Route::get('health', [HealthController::class, 'check'])->name('health');
         Route::get('menus/{location}', [PublicMenuController::class, 'showByLocation'])->name('menus.location');
         Route::get('settings', [PublicSettingController::class, 'index'])->name('settings.index');
+        Route::get('posts', [PublicPostController::class, 'index'])->name('posts.index');
+        Route::get('posts/{slug}', [PublicPostController::class, 'show'])->name('posts.show');
         Route::get('sitemap', fn () => response()->json(['success' => true, 'data' => SitemapRegistry::getUrls()]))->name('sitemap');
         Route::get('redirects/resolve', [RedirectController::class, 'resolve'])->name('redirects.resolve');
         // Soft per-IP limit lives in the controller (204). This is a hard abuse ceiling (429).
@@ -205,5 +211,26 @@ Route::prefix('v1')->group(function () {
         Route::get('system/traffic', [AdminTrafficController::class, 'index'])->middleware('permission:view-traffic')->name('system.traffic.index');
         Route::post('system/traffic/flush', [AdminTrafficController::class, 'flush'])->middleware('permission:view-traffic')->name('system.traffic.flush');
         Route::delete('system/traffic', [AdminTrafficController::class, 'reset'])->middleware('permission:manage-traffic')->name('system.traffic.reset');
+
+        // Maintenance windows + immediate toggle
+        Route::get('system/maintenance', [MaintenanceController::class, 'status'])->name('system.maintenance.status');
+        Route::post('system/maintenance/toggle', [MaintenanceController::class, 'toggle'])->name('system.maintenance.toggle');
+        Route::post('system/maintenance/windows', [MaintenanceController::class, 'storeWindow'])->name('system.maintenance.windows.store');
+        Route::post('system/maintenance/windows/{window}/cancel', [MaintenanceController::class, 'cancelWindow'])->name('system.maintenance.windows.cancel');
+
+        // Generic scheduled tasks
+        Route::get('system/scheduled-tasks', [ScheduledTaskController::class, 'index'])->middleware('permission:view-schedules')->name('system.scheduled-tasks.index');
+        Route::post('system/scheduled-tasks/{scheduledTask}/cancel', [ScheduledTaskController::class, 'cancel'])->middleware('permission:manage-schedules')->name('system.scheduled-tasks.cancel');
+
+        // Blog posts
+        Route::get('posts', [AdminPostController::class, 'index'])->middleware('permission:view-posts')->name('posts.index');
+        Route::post('posts', [AdminPostController::class, 'store'])->middleware('permission:manage-posts')->name('posts.store');
+        Route::get('posts/{post}', [AdminPostController::class, 'show'])->middleware('permission:view-posts')->name('posts.show');
+        Route::put('posts/{post}', [AdminPostController::class, 'update'])->middleware('permission:manage-posts')->name('posts.update');
+        Route::delete('posts/{post}', [AdminPostController::class, 'destroy'])->middleware('permission:manage-posts')->name('posts.destroy');
+        Route::post('posts/{post}/schedule', [AdminPostController::class, 'schedule'])->middleware('permission:publish-posts')->name('posts.schedule');
+        Route::post('posts/{post}/unschedule', [AdminPostController::class, 'unschedule'])->middleware('permission:publish-posts')->name('posts.unschedule');
+        Route::post('posts/{post}/publish', [AdminPostController::class, 'publish'])->middleware('permission:publish-posts')->name('posts.publish');
+        Route::post('posts/{post}/archive', [AdminPostController::class, 'archive'])->middleware('permission:manage-posts')->name('posts.archive');
     });
 });

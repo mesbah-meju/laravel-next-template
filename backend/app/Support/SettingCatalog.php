@@ -38,6 +38,7 @@ class SettingCatalog
             'seo_bing_site_verification' => '',
             'maintenance_mode' => '0',
             'maintenance_message' => 'We are performing scheduled maintenance. Please check back shortly.',
+            'maintenance_manual_override_at' => '',
             'social_links' => json_encode([
                 'github' => 'https://github.com',
                 'twitter' => 'https://twitter.com',

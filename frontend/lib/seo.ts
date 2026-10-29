@@ -97,6 +97,39 @@ export async function getPublicSeoSettings(): Promise<PublicSiteSettings> {
   };
 }
 
+/**
+ * Fresh maintenance flags — must not use long-lived HTML/data cache.
+ */
+export async function getPublicMaintenanceState(): Promise<{
+  enabled: boolean;
+  message?: string;
+}> {
+  const apiUrl = getBackendUrl();
+
+  try {
+    const res = await fetch(`${apiUrl}/api/v1/public/settings`, {
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const settings = (data?.data || {}) as PublicSiteSettings;
+      const enabled = isSeoFlagEnabled(settings.maintenance_mode, false);
+      const message =
+        typeof settings.maintenance_message === 'string' && settings.maintenance_message.trim()
+          ? settings.maintenance_message.trim()
+          : undefined;
+
+      return { enabled, message };
+    }
+  } catch {
+    // Backend unavailable — treat as live
+  }
+
+  return { enabled: false };
+}
+
 /** Map legacy default_meta_* keys onto seo_* when SEO fields are empty. */
 function normalizePublicSeoSettings(raw: Record<string, unknown>): PublicSiteSettings {
   const settings = { ...raw } as PublicSiteSettings;

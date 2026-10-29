@@ -20,12 +20,23 @@ php artisan storage:link
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-Optional workers:
+### Scheduler + queue (required for scheduled tasks)
+
+Maintenance windows and scheduled post publishing use `scheduled_tasks` claimed by Artisan and executed by the database queue. Without both processes, tasks stay `pending`/`queued`.
+
+In one terminal (or use `schedule:work` for local):
 
 ```bash
-php artisan queue:work
 php artisan schedule:work
 ```
+
+In another:
+
+```bash
+php artisan queue:work --queue=default --sleep=1 --tries=3
+```
+
+`schedule:run` (every minute) runs `traffic:flush` and `schedule:dispatch-due` (atomic claim, lease recovery, job dispatch). Store all `run_at` values in UTC.
 
 ## Frontend
 

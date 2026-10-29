@@ -40,6 +40,8 @@ import {
   Globe,
   BarChart3,
   Construction,
+  Newspaper,
+  CalendarClock,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/hooks/usePermission';
@@ -134,6 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           label: 'Content Management',
           icon: Layers,
           children: [
+            { label: 'Posts', href: '/admin/content/posts', icon: Newspaper, permission: 'view-posts' },
             { label: 'Menu Builder', href: '/admin/menus', icon: MenuSquare, permission: 'manage-menus' },
             { label: 'Media Manager', href: '/admin/media', icon: ImageIcon, permission: 'manage-media' },
             { label: 'Import / Export', href: '/admin/tools/import-export', icon: FileSpreadsheet, permission: 'manage-imports' },
@@ -156,7 +159,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           children: [
             { label: 'Site Settings', href: '/admin/settings', icon: Settings, permission: 'manage-settings' },
             { label: 'URL Redirects', href: '/admin/settings/redirects', icon: GitCompare, permission: 'manage-settings' },
-            { label: 'Maintenance Mode', href: '/admin/system/maintenance', icon: Construction, permission: 'manage-settings' },
+            { label: 'Maintenance Mode', href: '/admin/system/maintenance', icon: Construction, permission: 'manage-maintenance' },
+            { label: 'Scheduled Tasks', href: '/admin/system/schedules', icon: CalendarClock, permission: 'view-schedules' },
             { label: 'Activity Logs', href: '/admin/activity-logs', icon: Activity, permission: 'view-activity-logs' },
             { label: 'Background Jobs', href: '/admin/system/jobs', icon: Layers, permission: 'view-failed-jobs' },
             { label: 'System Health', href: '/admin/system/health', icon: Cpu, permission: 'view-system-health' },

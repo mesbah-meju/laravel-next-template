@@ -31,8 +31,26 @@
 2. `php artisan migrate --force`
 3. `php artisan config:cache && php artisan route:cache && php artisan view:cache`
 4. `php artisan storage:link`
-5. Run queue worker + scheduler (`* * * * * php artisan schedule:run`)
+5. Run a persistent queue worker **and** cron for the scheduler (see below)
 6. `npm ci && npm run build && npm run start` (or your platform’s Next runner)
+
+### Cron + queue worker (scheduled tasks)
+
+Cron (every minute):
+
+```bash
+* * * * * cd /path/to/backend && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Supervisor (or equivalent) for the worker:
+
+```bash
+php artisan queue:work --queue=default --sleep=1 --tries=3
+```
+
+`schedule:run` dispatches due rows via `schedule:dispatch-due` (claim/lease/recovery). Without the worker, tasks remain `queued` / `dispatch_pending` until a worker starts or recovery re-dispatches. Do not rely on `artisan down` for visitor maintenance—use settings + maintenance windows.
+
+CDN / reverse proxies must not cache public HTML that embeds the maintenance flag forever; the public maintenance check uses `cache: 'no-store'`.
 
 ## Security notes
 

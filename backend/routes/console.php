@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('traffic:flush')->everyMinute();
+Schedule::command('schedule:dispatch-due')->everyMinute()->withoutOverlapping();
